@@ -106,15 +106,11 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $baseVersion = node -p "require('./package.json').version"
+          $version = node -p "require('./package.json').version"
           if ($env:GITHUB_REF_TYPE -eq "tag") {
-            $baseVersion = $env:GITHUB_REF_NAME.TrimStart("v", "V")
-          }
-          $version = $baseVersion
-          $commitSubject = (& git log -1 --format=%s).Trim()
-          $isReleaseBuild = $commitSubject -match '^release:\s+v\d+\.\d+\.\d+$'
-          if (-not $isReleaseBuild -and $env:GITHUB_REF_TYPE -ne "tag") {
-            $version = "$baseVersion-$env:GITHUB_RUN_NUMBER"
+            $version = $env:GITHUB_REF_NAME.TrimStart("v", "V")
+          } else {
+            $version = "$version-$env:GITHUB_RUN_NUMBER"
           }
           $version = $version -replace '[\\/]', '-'
 
@@ -141,7 +137,6 @@ jobs:
             throw "NSIS installer was not created: $installer"
           }
           "installer=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "release_version=$baseVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
@@ -180,7 +175,6 @@ jobs:
             throw "NSIS installer was not created: $installer"
           }
           "installer=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "release_version=$baseVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
