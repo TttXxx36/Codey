@@ -703,8 +703,8 @@
     ].join("");
   const subagentHistoricalActiveVerifierExpression =
     (descendantThreadsName, ancestorThreadIdName) => [
-      `${descendantThreadsName}=(globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__??={`,
-      "version:5,requestTimeoutMs:1500,states:new WeakMap,contexts:new Map,requestQueue:[],activeRequests:0,peakRequests:0,queuePeak:0,scans:0,inspected:0,candidates:0,projectionScans:0,projectionInspected:0,projectionCandidates:0,requests:0,cacheHits:0,corrected:0,skipped:0,failures:0,deferred:0,",
+      `${descendantThreadsName}=(globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__?.version===6?globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__:globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__={`,
+      "version:6,requestTimeoutMs:1500,states:new WeakMap,contexts:new Map,requestQueue:[],activeRequests:0,peakRequests:0,queuePeak:0,scans:0,inspected:0,candidates:0,projectionScans:0,projectionInspected:0,projectionCandidates:0,requests:0,cacheHits:0,corrected:0,skipped:0,failures:0,deferred:0,",
       "terminal(status){return status===`completed`||status===`failed`||status===`interrupted`},",
       "loadedActive(store,id){return store.getConversation?.(id)?.turns?.at(-1)?.status===`inProgress`},",
       "evidence(store,id){return store.getThreadRuntimeStatusEvidence?.(id)??null},",
