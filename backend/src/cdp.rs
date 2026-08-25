@@ -565,11 +565,11 @@ fn prepare_injection_scripts_for_platform_with_appearance(
     }
 }
 
-fn prepare_script(
-    script: &str,
+fn prepare_script<'a>(
+    script: &'a str,
     slim_codex_pet: bool,
     appearance: Option<&CodexAppearanceConfig>,
-) -> Cow<'_, str> {
+) -> Cow<'a, str> {
     let mut prepared = None;
     if script.contains("__CODEY_SLIM_PET__") {
         prepared = Some(script.replace(
@@ -578,7 +578,7 @@ fn prepare_script(
         ));
     }
     if script.contains("__CODEY_CODEX_APPEARANCE_SETTINGS__") {
-        let settings = serde_json::to_string(appearance.cloned().unwrap_or_default())
+        let settings = serde_json::to_string(&appearance.cloned().unwrap_or_default())
             .expect("Codex appearance settings should serialize");
         let source = prepared.as_deref().unwrap_or(script);
         prepared = Some(source.replace("__CODEY_CODEX_APPEARANCE_SETTINGS__", &settings));
