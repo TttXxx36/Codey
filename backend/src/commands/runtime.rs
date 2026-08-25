@@ -19,8 +19,8 @@ use super::{
 };
 use crate::codex_config::codex_home;
 use crate::error_log;
-use crate::perf_trace;
 use crate::launcher::{CodeyRuntime, restore_previous_runtime_state, restore_runtime_config};
+use crate::perf_trace;
 
 pub(crate) const CC_SWITCH_ROUTE_RECOVERY_INTERVAL: Duration = Duration::from_secs(1);
 pub(crate) const CC_SWITCH_ROUTE_RECOVERY_STABLE_READS: u8 = 2;
