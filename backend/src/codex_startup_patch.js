@@ -703,8 +703,8 @@
     ].join("");
   const subagentHistoricalActiveVerifierExpression =
     (descendantThreadsName, ancestorThreadIdName) => [
-      `${descendantThreadsName}=await (globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__??={`,
-      "version:5,states:new WeakMap,contexts:new Map,requestQueue:[],activeRequests:0,peakRequests:0,queuePeak:0,scans:0,inspected:0,candidates:0,projectionScans:0,projectionInspected:0,projectionCandidates:0,requests:0,cacheHits:0,corrected:0,skipped:0,failures:0,deferred:0,",
+      `${descendantThreadsName}=(globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__?.version===6?globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__:globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__={`,
+      "version:6,requestTimeoutMs:1500,states:new WeakMap,contexts:new Map,requestQueue:[],activeRequests:0,peakRequests:0,queuePeak:0,scans:0,inspected:0,candidates:0,projectionScans:0,projectionInspected:0,projectionCandidates:0,requests:0,cacheHits:0,corrected:0,skipped:0,failures:0,deferred:0,",
       "terminal(status){return status===`completed`||status===`failed`||status===`interrupted`},",
       "loadedActive(store,id){return store.getConversation?.(id)?.turns?.at(-1)?.status===`inProgress`},",
       "evidence(store,id){return store.getThreadRuntimeStatusEvidence?.(id)??null},",
@@ -742,6 +742,12 @@
       "this.activeRequests-=1;this.pump()",
       "})",
       "}},",
+      "withTimeout(value,timeoutMs){",
+      "let timer;return new Promise((resolve,reject)=>{",
+      "timer=globalThis.setTimeout(()=>reject(new Error(`thread status request timed out`)),timeoutMs);",
+      "Promise.resolve(value).then(result=>{globalThis.clearTimeout(timer);resolve(result)},error=>{globalThis.clearTimeout(timer);reject(error)})",
+      "})",
+      "},",
       "check(state,client,id,key){",
       "const now=Date.now(),existing=state.entries.get(key);",
       "if(existing?.kind===`terminal`){",
@@ -752,7 +758,8 @@
       "state.entries.delete(key);let pending;",
       "const request=this.runLimited(async()=>{",
       "this.requests+=1;",
-      "return client.sendRequest(`thread/turns/list`,{threadId:id,cursor:null,limit:1,sortDirection:`desc`,itemsView:`notLoaded`},{priority:`background`,source:`collab_hydration`})",
+      "const operation=client.sendRequest(`thread/turns/list`,{threadId:id,cursor:null,limit:1,sortDirection:`desc`,itemsView:`notLoaded`},{priority:`background`,source:`collab_hydration`});",
+      "return this.withTimeout(operation,this.requestTimeoutMs)",
       "});",
       "if(request==null)return Promise.resolve(!1);",
       "pending=request.then(result=>{",
@@ -859,8 +866,13 @@
       "this.applyIdle(context.store,entry)",
       "}",
       "},",
+      "scheduleVerify(store,client,parentId,threads){",
+      "const schedule=globalThis.queueMicrotask??(callback=>Promise.resolve().then(callback));",
+      "schedule(()=>{Promise.resolve().then(()=>this.verify(store,client,parentId,threads)).catch(()=>{})});",
+      "return threads",
+      "},",
       "snapshot(){return{version:this.version,scans:this.scans,inspected:this.inspected,candidates:this.candidates,projectionScans:this.projectionScans,projectionInspected:this.projectionInspected,projectionCandidates:this.projectionCandidates,requests:this.requests,activeRequests:this.activeRequests,queuedRequests:this.requestQueue.length,cacheHits:this.cacheHits,peakRequests:this.peakRequests,queuePeak:this.queuePeak,corrected:this.corrected,skipped:this.skipped,failures:this.failures,deferred:this.deferred,contexts:this.contexts.size}}",
-      `}).verify(this.params.threadStore,this.params.requestClient,${ancestorThreadIdName},${descendantThreadsName})`,
+      `}).scheduleVerify(this.params.threadStore,this.params.requestClient,${ancestorThreadIdName},${descendantThreadsName})`,
     ].join("");
   const patchCodexRendererAsset = (source) => {
     let patched = source;

@@ -402,6 +402,14 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     );
     assert.match(patchedHistoricalSubagentSource, /entries\.size>=256/);
     assert.match(patchedHistoricalSubagentSource, /activeRequests<2/);
+    assert.match(patchedHistoricalSubagentSource, /version:6,requestTimeoutMs:1500/);
+    assert.match(patchedHistoricalSubagentSource, /thread status request timed out/);
+    assert.match(patchedHistoricalSubagentSource, /scheduleVerify/);
+    assert.doesNotMatch(
+      patchedHistoricalSubagentSource,
+      /await \(globalThis\.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__/,
+      "historical verification must not block the native sidebar render promise",
+    );
     assert.match(patchedHistoricalSubagentSource, /queryCandidates\.slice\(0,8\)/);
     assert.match(patchedHistoricalSubagentSource, /inspected<32/);
     assert.match(patchedHistoricalSubagentSource, /context\.pending\.size>=32/);
@@ -546,6 +554,12 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       };
     };
 
+    const waitForVerifier = async (predicate) => {
+      for (let attempt = 0; attempt < 100 && !predicate(); attempt += 1) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    };
+
     // Reproduce the actual failure: the state-DB list itself contains no active
     // row, but native reconcile appends a cached active descendant. A verifier
     // placed before reconcile sees zero candidates while the final UI projection
@@ -614,6 +628,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       primaryClient,
       primaryThreads,
     ).discover("parent-primary");
+    await waitForVerifier(() => primaryStore.recordedStatuses.length === 5);
     assert.equal(primaryClient.getMaxInFlight(), 2);
     assert.equal(primaryClient.requests.length, 8);
     assert.ok(primaryClient.requests.every(({ params, options }) =>
@@ -663,7 +678,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     assert.deepEqual(
       globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__.snapshot(),
       {
-        version: 5,
+        version: 6,
         scans: 1,
         inspected: 8,
         candidates: 8,
@@ -699,6 +714,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       cappedThreads,
     );
     const firstCappedSnapshot = await cappedTopology.discover("parent-cap");
+    await waitForVerifier(() => cappedStore.recordedStatuses.length === 8);
     assert.equal(cappedClient.requests.length, 8);
     assert.equal(cappedClient.getMaxInFlight(), 2);
     assert.deepEqual(
@@ -707,12 +723,14 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       "the bounded first pass should prioritize older suspicious rows",
     );
     assert.equal(
-      firstCappedSnapshot.descendantThreads.filter(({ status }) =>
-        status.type === "idle"
+      cappedThreads.filter(({ id }) =>
+        cappedStore.projectedStatus(firstCappedSnapshot, id) === "idle"
       ).length,
       8,
+      "background verification publishes idle evidence without blocking the snapshot promise",
     );
     const secondCappedSnapshot = await cappedTopology.discover("parent-cap");
+    await waitForVerifier(() => cappedClient.requests.length === 9);
     assert.equal(cappedClient.requests.length, 9);
     assert.equal(
       secondCappedSnapshot.descendantThreads.every(({ status }) =>
@@ -750,6 +768,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     const firstRotatingTopology = await rotatingTopology.discover(
       "parent-rotating-topology",
     );
+    await waitForVerifier(() => rotatingTopologyClient.requests.length === 8);
     assert.equal(
       firstRotatingTopology.descendantThreads[32].status.type,
       "active",
@@ -763,8 +782,9 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     const secondRotatingTopology = await rotatingTopology.discover(
       "parent-rotating-topology",
     );
+    await waitForVerifier(() => rotatingTopologyClient.requests.length === 9);
     assert.equal(
-      secondRotatingTopology.descendantThreads[32].status.type,
+      rotatingTopologyStore.projectedStatus(secondRotatingTopology, "child-rotating-topology-33"),
       "idle",
       "the rotating cursor must reach a stale row after 32 long-running predecessors",
     );
@@ -1011,6 +1031,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     await Promise.all(sharedTopologies.map((topology, index) =>
       topology.discover(`parent-shared-${index}`)
     ));
+    await waitForVerifier(() => sharedConcurrency.maxInFlight === 2 && sharedConcurrency.inFlight === 0);
     assert.equal(
       sharedConcurrency.maxInFlight,
       2,

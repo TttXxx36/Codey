@@ -34,6 +34,8 @@
   let observedRegion = null;
   let observedToolbar = null;
   let mutationObserver = null;
+  let appearanceObserverTimer = 0;
+  let appearanceMountDirty = true;
   let configChangeHandler = null;
   let resizeHandler = null;
 
@@ -143,13 +145,37 @@
     return { target: header, before: child };
   }
 
+  function scheduleAppearanceButtonSync() {
+    appearanceMountDirty = true;
+    if (appearanceObserverTimer) return;
+    appearanceObserverTimer = window.setTimeout(() => {
+      appearanceObserverTimer = 0;
+      if (!appearanceMountDirty) return;
+      appearanceMountDirty = false;
+      ensureAppearanceButton();
+    }, 80);
+  }
+
   function ensureAppearanceButton() {
     if (!ownsBackground && hasLegacyCustomizer()) return false;
+    if (!appearanceMountDirty) {
+      const current = document.getElementById(BUTTON_ID);
+      const wrapper = current?.parentElement;
+      if (current instanceof HTMLButtonElement
+        && current.isConnected
+        && wrapper instanceof HTMLElement
+        && wrapper.classList.contains(BUTTON_WRAPPER_CLASS)
+        && wrapper.nextElementSibling === current.__codeyAppearanceAnchor) {
+        return true;
+      }
+      appearanceMountDirty = true;
+    }
     ensureButtonStyle();
     const mount = findHeaderShareMount() || findFallbackButtonMount();
     let button = document.getElementById(BUTTON_ID);
     if (!mount) {
       button?.parentElement?.remove?.();
+      appearanceMountDirty = true;
       return false;
     }
     let wrapper = button?.parentElement;
@@ -178,6 +204,8 @@
     if (wrapper.parentElement !== mount.target || wrapper.nextElementSibling !== mount.before) {
       mount.target.insertBefore(wrapper, mount.before || null);
     }
+    button.__codeyAppearanceAnchor = mount.before || null;
+    appearanceMountDirty = false;
     return true;
   }
 
@@ -368,6 +396,8 @@
 
   function destroy() {
     if (syncTimer) window.clearTimeout(syncTimer);
+    if (appearanceObserverTimer) window.clearTimeout(appearanceObserverTimer);
+    appearanceObserverTimer = 0;
     syncTimer = 0;
     resizeObserver?.disconnect?.();
     resizeObserver = null;
@@ -406,9 +436,28 @@
   window.addEventListener?.("codey:config-changed", configChangeHandler);
   resizeHandler = scheduleSync;
   window.addEventListener?.("resize", resizeHandler, { passive: true });
+  const mutationTouchesAppearanceMount = (mutation) => {
+    const target = mutation?.target;
+    if (target instanceof Element
+      && (target.matches("header, nav") || target.closest("header, nav"))) return true;
+    for (const node of [
+      ...(mutation?.addedNodes || []),
+      ...(mutation?.removedNodes || []),
+    ]) {
+      if (!(node instanceof Element)) continue;
+      if (node.matches("header, nav, button[aria-label='Share'], button[aria-label='分享']")
+        || node.querySelector?.("header, nav, button[aria-label='Share'], button[aria-label='分享']")) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   if (document.documentElement && typeof MutationObserver === "function") {
-    mutationObserver = new MutationObserver(() => {
-      ensureAppearanceButton();
+    mutationObserver = new MutationObserver((mutations) => {
+      if (mutations.some(mutationTouchesAppearanceMount)) {
+        scheduleAppearanceButtonSync();
+      }
       if (!observedRegion?.isConnected || !observedToolbar?.isConnected) scheduleSync();
     });
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true });
@@ -418,7 +467,7 @@
   ensureAppearanceButton();
   for (const delay of [100, 500, 1500, 3000]) {
     window.setTimeout(() => {
-      ensureAppearanceButton();
+      scheduleAppearanceButtonSync();
       scheduleSync();
     }, delay);
   }
