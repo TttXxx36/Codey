@@ -1017,6 +1017,18 @@ fn normalize_model_map(models_by_provider: &mut BTreeMap<String, String>) {
     });
 }
 
+fn default_codex_background_opacity() -> u16 {
+    70
+}
+
+fn default_codex_surface_opacity() -> u16 {
+    38
+}
+
+fn default_codex_chat_width() -> u16 {
+    1200
+}
+
 fn default_true() -> bool {
     true
 }
