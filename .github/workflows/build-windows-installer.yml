@@ -89,7 +89,7 @@ jobs:
           "MAKENSIS=$makensis" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: TypeScript check
         run: pnpm run check

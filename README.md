@@ -26,6 +26,16 @@ Codey 是 Codex 桌面客户端的增强启动器。打开 Codey 后，它会自
 - 提供统一的诊断存储统计、清理和保护：可阻止 Trace 日志持续写盘，并在 macOS 上限制待处理崩溃报告异常堆积，帮助避免诊断数据长期占用磁盘。
 - 支持最多 32 个飞书机器人（包括企业内网部署）、企业微信 Webhook 和 Telegram 通知渠道，可单独启停、删除和测试；测试通过后保存会立即生效，并在任务完成、失败或等待介入时发送提醒。安装 Codey 更新前会先保存尚未落盘的设置，避免更新重启后丢失。
 
+## GitHub Actions 工作流
+
+本仓库以 GitHub 为主要维护入口，不需要在本地构建或执行上游同步：
+
+- **Build Windows installer**：推送到 `master` 后自动运行 TypeScript、JavaScript、Rust 和 Windows 检查，并构建 Windows x64 安装包。安装包会作为 Actions artifact 保存 30 天，也可以在对应工作流页面手动运行。
+- **Sync upstream safely**：按 UTC 时间每两天运行一次（`17 03 */2 * *`），从 `SuperGness/codey` 获取上游更新，并通过 `scripts/sync-upstream.ps1` 保留本仓库的外观设置、注入脚本和同步规则。工作区不干净、无法确认分支或发生冲突时会安全停止，不执行 reset、clean、stash 或自动选择 ours/theirs；冲突报告会保存为 artifact，并在需要时创建 Issue。
+- 同步成功后会自动触发一次新的 Windows 安装包构建。后续修改直接在 GitHub 的文件编辑器、Pull Request 或其他 GitHub 自动化中完成；本地构建不是发布流程的一部分。
+
+外观设置在 Codey 控制台中提供：可以选择背景图、调整背景/界面遮罩透明度和对话内容最大宽度。配置会随 Codey 配置文件持久化，并在启动 Codex 时自动注入；背景只覆盖中央对话区，不覆盖左侧会话栏和顶部工具栏。
+
 ## 使用方式
 
 打开 Codey 后，它会自动启动 Codex。进入 Codex 后，点击顶部的 “Codey” 按钮即可打开控制台。已加载线路之间的模型切换会立即生效；多数线路新增、删除和模型选择变更也会即时刷新，其他需要重启的设置请按界面提示保存并重启 Codex。
