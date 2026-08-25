@@ -25,7 +25,7 @@ test("Codex appearance keeps the image inside the conversation surface", () => {
   assert.match(appearanceSource, /appearanceMountDirty/);
   assert.match(appearanceSource, /scheduleAppearanceButtonSync/);
   assert.match(appearanceSource, /mutationTouchesAppearanceMount/);
-  assert.doesNotMatch(appearanceSource, /new MutationObserver\(\(\) => \{\s*ensureAppearanceButton\(\)/);});
+  assert.doesNotMatch(appearanceSource, /new MutationObserver\(\(\) => \{\s*ensureAppearanceButton\(\)/);\n});
 
 test("Codex appearance supports persistent hot-apply and safe capability fallback", () => {
   assert.match(appearanceSource, /codey:config-changed/);
