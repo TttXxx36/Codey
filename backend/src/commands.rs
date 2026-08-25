@@ -790,13 +790,12 @@ pub async fn invoke_api(state: &Arc<AppState>, command: &str, args: Value) -> Va
 pub async fn load_codey_config(state: &Arc<AppState>) -> Result<Value, String> {
     let runtime_running = state.runtime.lock().await.is_some();
     if !runtime_running && let Err(error) = prepare_routes_for_current_launch(state).await {
-            error_log::record_failure(
-                "route_prepare_failed",
-                "load_codey_config",
-                error,
-                json!({}),
-            );
-        }
+        error_log::record_failure(
+            "route_prepare_failed",
+            "load_codey_config",
+            error,
+            json!({}),
+        );
     }
     let imported = ensure_default_route_imported(state).await;
     let config = if imported {
