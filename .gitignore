@@ -12,7 +12,6 @@
 
 # Local runtime state and environment files
 /.codey/
-/.codex-sync/
 .env
 .env.*
 !.env.example

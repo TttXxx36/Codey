@@ -11,7 +11,6 @@ use codey_runtime_core::bridge::{
 use codey_runtime_core::cdp::{CdpTarget, list_targets, pick_injectable_codex_page_target};
 use serde::{Deserialize, Serialize};
 
-use crate::config::CodexAppearanceConfig;
 use crate::error_log;
 
 const SETTINGS_OVERLAY_LOAD_PATH: &str = "/internal/codey/settings-overlay/load";
@@ -37,12 +36,9 @@ const PET_CONTROL_SHIELD_SCRIPT: &str =
 const SECURITY_WARNING_SHIELD_SCRIPT: &str =
     include_str!("../../dist-overlay/inject/security-warning-shield.js");
 const SETTINGS_OVERLAY_SCRIPT: &str = include_str!("../../dist-overlay/codey-overlay.js");
-const SETTINGS_OVERLAY_STYLES: &str = include_str!("../../dist-overlay/codey.css");
 const PLUGIN_MARKETPLACE_FIX_SCRIPT: &str =
     include_str!("../../dist-overlay/inject/plugin-marketplace-fix.js");
 const PROMPT_OPTIMIZE_SCRIPT: &str = include_str!("../../dist-overlay/inject/prompt-optimize.js");
-const CODEX_APPEARANCE_SCRIPT: &str =
-    include_str!("../../dist-overlay/inject/codex-appearance.js");
 const MAX_INJECTION_ERROR_CHARS: usize = 500;
 static SETTINGS_OVERLAY_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
 static SESSION_TOOLS_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
@@ -214,41 +210,9 @@ pub fn prepare_injection_scripts(
     )
 }
 
-pub fn prepare_injection_scripts_with_appearance(
-    slim_codex_pet: bool,
-    hide_full_access_warning: bool,
-    appearance: &CodexAppearanceConfig,
-    user_scripts: &[String],
-) -> PreparedInjectionScripts {
-    prepare_injection_scripts_for_platform_with_appearance(
-        slim_codex_pet,
-        hide_full_access_warning,
-        appearance,
-        user_scripts,
-        InjectionHostPlatform::current(),
-    )
-}
-
 fn prepare_injection_scripts_for_platform(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
-    user_scripts: &[String],
-    platform: InjectionHostPlatform,
-) -> PreparedInjectionScripts {
-    let appearance = CodexAppearanceConfig::default();
-    prepare_injection_scripts_for_platform_with_appearance(
-        slim_codex_pet,
-        hide_full_access_warning,
-        &appearance,
-        user_scripts,
-        platform,
-    )
-}
-
-fn prepare_injection_scripts_for_platform_with_appearance(
-    slim_codex_pet: bool,
-    hide_full_access_warning: bool,
-    appearance: &CodexAppearanceConfig,
     user_scripts: &[String],
     platform: InjectionHostPlatform,
 ) -> PreparedInjectionScripts {
@@ -489,22 +453,6 @@ fn prepare_injection_scripts_for_platform_with_appearance(
             Feature,
             All,
         ),
-        (
-            "codex-appearance",
-            "Codex 外观调整",
-            CODEX_APPEARANCE_SCRIPT,
-            r#"(() => {
-              const appearance = window.__codeyCodexAppearance;
-              if (!appearance || typeof appearance.snapshot !== "function") return "";
-              const snapshot = appearance.snapshot();
-              return snapshot.ownsBackground === true
-                ? `Codex 背景、对话宽度和界面遮罩已生效（宽度 ${snapshot.chatWidth}px）`
-                : { effective: false, inactive: true, detail: "Codex 外观控制器已就绪，当前未设置 Codey 背景图片" };
-            })()"#
-                .to_string(),
-            Feature,
-            All,
-        ),
     ];
     let mut core_bundle = String::with_capacity(
         CODEY_BRIDGE_SCRIPT.len()
@@ -516,7 +464,6 @@ fn prepare_injection_scripts_for_platform_with_appearance(
             + SECURITY_WARNING_SHIELD_SCRIPT.len()
             + PLUGIN_MARKETPLACE_FIX_SCRIPT.len()
             + PROMPT_OPTIMIZE_SCRIPT.len()
-            + CODEX_APPEARANCE_SCRIPT.len()
             + 4096,
     );
     let mut descriptors = Vec::with_capacity(builtin_scripts.len() + user_scripts.len());
@@ -531,7 +478,7 @@ fn prepare_injection_scripts_for_platform_with_appearance(
             visibility,
             probe: Some(probe),
         };
-        let prepared = prepare_script(script, slim_codex_pet, appearance);
+        let prepared = prepare_script(script, slim_codex_pet);
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
         descriptors.push(descriptor);
     }
@@ -561,25 +508,14 @@ fn prepare_injection_scripts_for_platform_with_appearance(
     }
 }
 
-fn prepare_script(
-    script: &str,
-    slim_codex_pet: bool,
-    appearance: &CodexAppearanceConfig,
-) -> Cow<'_, str> {
-    let mut prepared = None;
-    if script.contains("__CODEY_SLIM_PET__") {
-        prepared = Some(script.replace(
-            "__CODEY_SLIM_PET__",
-            if slim_codex_pet { "true" } else { "false" },
-        ));
+fn prepare_script(script: &str, slim_codex_pet: bool) -> Cow<'_, str> {
+    if !script.contains("__CODEY_SLIM_PET__") {
+        return Cow::Borrowed(script);
     }
-    if script.contains("__CODEY_CODEX_APPEARANCE_SETTINGS__") {
-        let settings = serde_json::to_string(appearance)
-            .expect("Codex appearance settings should serialize");
-        let source = prepared.as_deref().unwrap_or(script);
-        prepared = Some(source.replace("__CODEY_CODEX_APPEARANCE_SETTINGS__", &settings));
-    }
-    prepared.map(Cow::Owned).unwrap_or(Cow::Borrowed(script))
+    Cow::Owned(script.replace(
+        "__CODEY_SLIM_PET__",
+        if slim_codex_pet { "true" } else { "false" },
+    ))
 }
 
 fn append_guarded_script(
@@ -918,12 +854,11 @@ async fn record_failed_injection_statuses(websocket_url: &str, statuses: &[Injec
 
 pub async fn refresh_model_whitelist(
     websocket_url: &str,
-    expected_models: &[String],
-    expected_default_model: &str,
+    expected_catalog: &serde_json::Value,
 ) -> Result<()> {
     let response = codey_runtime_core::bridge::evaluate_script_with_await_promise(
         websocket_url,
-        &model_whitelist_refresh_script(expected_models, expected_default_model),
+        &model_whitelist_refresh_script(expected_catalog),
         true,
     )
     .await
@@ -931,24 +866,20 @@ pub async fn refresh_model_whitelist(
     verify_model_whitelist_refresh_response(&response)
 }
 
-fn model_whitelist_refresh_script(
-    expected_models: &[String],
-    expected_default_model: &str,
-) -> String {
-    let expected_models =
-        serde_json::to_string(expected_models).expect("model ids should serialize");
-    let expected_default_model =
-        serde_json::to_string(expected_default_model).expect("default model should serialize");
+fn model_whitelist_refresh_script(expected_catalog: &serde_json::Value) -> String {
+    let expected_catalog =
+        serde_json::to_string(expected_catalog).expect("model catalog should serialize");
     format!(
         r#"(async () => {{
-  const expectedModels = {expected_models};
-  const expectedDefaultModel = {expected_default_model};
-  const expectedCatalog = {{
-    status: expectedModels.length > 0 ? "ok" : "not_configured",
-    model: expectedDefaultModel,
-    default_model: expectedDefaultModel,
-    models: expectedModels,
-  }};
+  const expectedCatalog = {expected_catalog};
+  const expectedModels = Array.isArray(expectedCatalog.models)
+    ? expectedCatalog.models
+    : [];
+  const expectedDefaultModel = typeof expectedCatalog.default_model === "string"
+    ? expectedCatalog.default_model
+    : typeof expectedCatalog.model === "string"
+      ? expectedCatalog.model
+      : "";
   const matchesExpected = (snapshot) => (
     snapshot?.loaded === true
     && Array.isArray(snapshot.models)
@@ -1199,12 +1130,7 @@ fn with_lazy_loaders(handler: BridgeHandler, websocket_url: Arc<str>) -> BridgeH
 
 fn prepared_settings_overlay_load_script() -> Arc<str> {
     SETTINGS_OVERLAY_LOAD_SCRIPT
-        .get_or_init(|| {
-            Arc::from(settings_overlay_load_script(
-                SETTINGS_OVERLAY_SCRIPT,
-                SETTINGS_OVERLAY_STYLES,
-            ))
-        })
+        .get_or_init(|| Arc::from(settings_overlay_load_script(SETTINGS_OVERLAY_SCRIPT)))
         .clone()
 }
 
@@ -1270,9 +1196,8 @@ fn lazy_settings_overlay_loader_script() -> &'static str {
 })()"#
 }
 
-fn settings_overlay_load_script(script: &str, styles: &str) -> String {
+fn settings_overlay_load_script(script: &str) -> String {
     let wrapped = wrap_settings_overlay(script);
-    let styles = serde_json::to_string(styles).expect("serialize settings overlay styles");
     format!(
         r#"(() => {{
   const current = window.__codeySettingsOverlay;
@@ -1280,12 +1205,10 @@ fn settings_overlay_load_script(script: &str, styles: &str) -> String {
     return "";
   }}
   if (current?.__codeyLazyLoader) delete window.__codeySettingsOverlay;
-  window.__codeyComponentStyles = {styles};
   {wrapped}
   const ready = typeof window.__codeySettingsOverlay === "object"
     && typeof window.__codeySettingsOverlay.toggle === "function"
     && !window.__codeySettingsOverlay.__codeyLazyLoader;
-  delete window.__codeyComponentStyles;
   if (ready) return "";
   if (current?.__codeyLazyLoader) window.__codeySettingsOverlay = current;
   return String(window.__codeyOverlayError || "未生成浮层控制器");
@@ -1547,10 +1470,18 @@ mod tests {
 
     #[test]
     fn model_whitelist_refresh_script_retries_and_verifies_the_expected_snapshot() {
-        let script = model_whitelist_refresh_script(
-            &["gpt-5.6-sol".into(), "provider-\"quoted".into()],
-            "provider-\"quoted",
-        );
+        let script = model_whitelist_refresh_script(&serde_json::json!({
+            "status": "ok",
+            "model": "provider-\"quoted",
+            "default_model": "provider-\"quoted",
+            "models": ["gpt-5.6-sol", "provider-\"quoted"],
+            "model_metadata": [{
+                "model": "provider-\"quoted",
+                "display_name": "Provider / provider-\"quoted",
+                "provider_id": "provider",
+                "source_model": "provider-\"quoted"
+            }]
+        }));
 
         assert!(script.contains("window.__codeyModelWhitelistPatch"));
         assert!(script.contains("await patch.setCatalog(expectedCatalog)"));
@@ -1559,6 +1490,7 @@ mod tests {
         assert!(!script.contains("patch.refresh()"));
         assert!(!script.contains("/codex-model-catalog"));
         assert!(script.contains("[0, 80, 200, 500]"));
+        assert!(script.contains("model_metadata"));
         assert!(script.contains(r#"provider-\"quoted"#));
         assert!(script.contains("snapshot.defaultModel === expectedDefaultModel"));
         assert!(script.contains("delivery.queryEntries"));
@@ -1637,9 +1569,9 @@ mod tests {
         assert!(prepared.scripts[1].contains("window.userScriptRan = true;"));
         assert!(prepared.scripts[1].contains(r#"status = "executed""#));
         assert!(prepared.scripts[1].contains("用户脚本 1 injection failed"));
-        assert_eq!(prepared.descriptors.len(), 12);
-        assert_eq!(prepared.descriptors[11].id, "user-script-1");
-        assert_eq!(prepared.descriptors[11].source, "user");
+        assert_eq!(prepared.descriptors.len(), 11);
+        assert_eq!(prepared.descriptors[10].id, "user-script-1");
+        assert_eq!(prepared.descriptors[10].source, "user");
         assert_eq!(
             prepared.descriptors[0].visibility,
             InjectionScriptVisibility::Internal
@@ -1650,7 +1582,7 @@ mod tests {
             InjectionScriptVisibility::Internal
         );
         assert_eq!(
-            prepared.descriptors[11].visibility,
+            prepared.descriptors[10].visibility,
             InjectionScriptVisibility::Feature
         );
         let snapshot_script = injection_status_snapshot_script(&prepared.descriptors);
@@ -1671,9 +1603,9 @@ mod tests {
         assert!(!snapshot_script.contains("user-script-1\": () =>"));
         let overlay_load_script = prepared_settings_overlay_load_script();
         assert!(overlay_load_script.contains("codey-settings-overlay-host"));
-        assert!(overlay_load_script.contains("window.__codeyComponentStyles = "));
-        assert!(overlay_load_script.contains(".semi-button"));
-        assert!(overlay_load_script.contains("--semi-color-primary:"));
+        assert!(overlay_load_script.contains("data-mantine-color-scheme"));
+        assert!(overlay_load_script.contains("--button-bg"));
+        assert!(overlay_load_script.contains("--mantine-color-blue-6:"));
         assert!(overlay_load_script.contains("delete window.__codeySettingsOverlay"));
         assert!(
             overlay_load_script.contains("window.__codeySettingsOverlay = current"),
@@ -1686,35 +1618,6 @@ mod tests {
         );
         // 压缩会改写内部标识符，锚点必须用不会被改名的 window 属性。
         assert!(session_tools_load_script.contains("__codeyDeleteSelectedMessages"));
-    }
-
-    #[test]
-    fn codex_appearance_settings_are_serialized_into_the_builtin_script() {
-        let appearance = CodexAppearanceConfig {
-            background_data_url: "data:image/png;base64,ZmFrZQ==".to_string(),
-            background_file_name: "custom.png".to_string(),
-            background_opacity: 82,
-            surface_opacity: 24,
-            chat_width: 1600,
-        };
-        let prepared = prepare_injection_scripts_for_platform_with_appearance(
-            false,
-            false,
-            &appearance,
-            &[],
-            InjectionHostPlatform::Windows,
-        );
-
-        let descriptor = prepared
-            .descriptors
-            .iter()
-            .find(|descriptor| descriptor.id == "codex-appearance")
-            .expect("Codex appearance should be a built-in feature");
-        assert_eq!(descriptor.visibility, InjectionScriptVisibility::Feature);
-        assert!(prepared.scripts[0].contains("data:image/png;base64,ZmFrZQ=="));
-        assert!(prepared.scripts[0].contains("backgroundOpacity"));
-        assert!(prepared.scripts[0].contains("chatWidth"));
-        assert!(!prepared.scripts[0].contains("__CODEY_CODEX_APPEARANCE_SETTINGS__"));
     }
 
     #[test]
@@ -1828,10 +1731,7 @@ mod tests {
 
     #[test]
     fn failed_settings_overlay_bundle_restores_the_lazy_loader() {
-        let script = settings_overlay_load_script(
-            "throw new Error('bundle failed');",
-            ".semi-button { color: red; }",
-        );
+        let script = settings_overlay_load_script("throw new Error('bundle failed');");
 
         let delete_index = script
             .find("delete window.__codeySettingsOverlay")
@@ -1842,6 +1742,5 @@ mod tests {
 
         assert!(restore_index > delete_index);
         assert!(script.contains("if (ready) return \"\""));
-        assert!(script.contains("delete window.__codeyComponentStyles"));
     }
 }

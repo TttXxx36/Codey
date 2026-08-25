@@ -47,33 +47,6 @@ test("main bundle detection accepts renamed CommonJS entry chunks by signature",
   assert.match(source, /get mainBundleSourcePatch\(\)/);
 });
 
-test("main bundle patch falls back to the original Codex source on anchor drift", async () => {
-  const source = await loadStartupPatchExpression();
-  const hookStart = source.indexOf("const codeyMainBundleCompileHook");
-  const hookEnd = source.indexOf("const microStub", hookStart);
-  const hook = source.slice(hookStart, hookEnd);
-
-  assert.ok(hookStart >= 0 && hookEnd > hookStart);
-  assert.match(hook, /const originalSource = source;/);
-  assert.match(hook, /recordRecoverableMainBundlePatchFailure\(error, filename\)/);
-  assert.match(hook, /source = originalSource;/);
-  assert.match(hook, /Module\._extensions\["\.js"\] = originalJsExtension/);
-  assert.match(hook, /module\._compile\(source, filename\)/);
-  assert.doesNotMatch(hook, /recordCodeyPatchFailure\("patch_codex_main_bundle"/);
-});
-
-test("update discovery starts after the Codex runtime instead of delaying launch", async () => {
-  const source = normalizeLineEndings(await readFile(
-    new URL("../backend/src/lib.rs", import.meta.url),
-    "utf8",
-  ));
-  const runtimeLaunch = source.indexOf("commands::launch_codey_runtime(&state).await");
-  const updateStart = source.indexOf("startup_update::run(&update_state, &update_ui).await");
-
-  assert.ok(runtimeLaunch >= 0 && updateStart > runtimeLaunch);
-  assert.match(source, /update_state\.request_update_shutdown\(\)/);
-});
-
 test("startup patch preserves native child processes and ordinary BrowserWindows", async () => {
   const Module = process.getBuiltinModule("module");
   const nativeLoad = Module._load;

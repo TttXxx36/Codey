@@ -6,8 +6,13 @@ export type Profile = {
   name: string;
   baseUrl: string;
   apiKey: string;
+  upstreamProtocol: "official" | "openaiResponses" | "openaiCompatible";
+  authMode: "officialAccount" | "apiKey";
+  apiKeyConfigured: boolean;
+  clearApiKey?: boolean;
   ccSwitchProviderId?: string;
   ccSwitchReadOnly: boolean;
+  supportsRemoteCompaction?: boolean;
 };
 
 export type PromptOptimizationConfig = {
@@ -33,23 +38,15 @@ export type SubagentRoleConfig = {
   reasoningEffort: string;
 };
 
-export type CodexAppearanceConfig = {
-  backgroundDataUrl: string;
-  backgroundFileName: string;
-  backgroundOpacity: number;
-  surfaceOpacity: number;
-  chatWidth: number;
-};
-
 export type Config = {
   settingsRevision: number;
   activeProfileId: string;
   profiles: Profile[];
+  initialRouteImportCompleted: boolean;
   webhook: { channels: NotificationChannel[] };
   promptOptimization: PromptOptimizationConfig;
   codexAppPath: string;
   userScripts: string[];
-  codexAppearance: CodexAppearanceConfig;
   selectedModelsByProvider: Record<string, string[]>;
   manualThirdPartyModelsByProvider: Record<string, string[]>;
   declaredOfficialModelsByProvider: Record<string, string[]>;
@@ -120,6 +117,7 @@ export type RuntimeStatus = {
   restartInProgress?: boolean;
   activeProfileId?: string;
   activeProfileName?: string;
+  officialAccountAvailable?: boolean;
   startupError?: string;
   codexAppPath?: string;
   maintenance?: Maintenance;
@@ -168,7 +166,12 @@ export type InlineResult = {
 };
 
 export type Confirmation = {
-  action: "clear" | "restart" | "install-update" | "delete-notification-channel";
+  action:
+    | "clear"
+    | "restart"
+    | "install-update"
+    | "delete-notification-channel"
+    | "delete-route";
   title: string;
   description: string;
   confirmLabel: string;
