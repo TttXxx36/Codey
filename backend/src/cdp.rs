@@ -40,8 +40,7 @@ const SETTINGS_OVERLAY_SCRIPT: &str = include_str!("../../dist-overlay/codey-ove
 const PLUGIN_MARKETPLACE_FIX_SCRIPT: &str =
     include_str!("../../dist-overlay/inject/plugin-marketplace-fix.js");
 const PROMPT_OPTIMIZE_SCRIPT: &str = include_str!("../../dist-overlay/inject/prompt-optimize.js");
-const CODEX_APPEARANCE_SCRIPT: &str =
-    include_str!("../../dist-overlay/inject/codex-appearance.js");
+const CODEX_APPEARANCE_SCRIPT: &str = include_str!("../../dist-overlay/inject/codex-appearance.js");
 const MAX_INJECTION_ERROR_CHARS: usize = 500;
 static SETTINGS_OVERLAY_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
 static SESSION_TOOLS_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
