@@ -169,7 +169,8 @@
         return true;
       }
       appearanceMountDirty = true;
-    }    ensureButtonStyle();
+    }
+    ensureButtonStyle();
     const mount = findHeaderShareMount() || findFallbackButtonMount();
     let button = document.getElementById(BUTTON_ID);
     if (!mount) {
