@@ -1512,9 +1512,10 @@ impl CodeyRuntime {
     ) -> Result<(Self, oneshot::Receiver<()>, Option<oneshot::Receiver<()>>)> {
         let home = codex_home();
         trace_log_write_protection_active.store(false, Ordering::Release);
-        let injection_scripts = cdp::prepare_injection_scripts(
+        let injection_scripts = cdp::prepare_injection_scripts_with_appearance(
             config.slim_codex_pet,
             config.hide_full_access_warning,
+            &config.codex_appearance,
             &config.user_scripts,
         );
         let initial_storage_guards = spawn_initial_storage_guards(home, config);
