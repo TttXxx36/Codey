@@ -112,7 +112,10 @@ jobs:
           }
           $version = $baseVersion
           $commitSubject = (& git log -1 --format=%s).Trim()
-          $isReleaseBuild = $commitSubject -match '^release:\s+v\d+\.\d+\.\d+
+          $isReleaseBuild = $commitSubject -match '^release:\s+v\d+\.\d+\.\d+$'
+          if (-not $isReleaseBuild -and $env:GITHUB_REF_TYPE -ne "tag") {
+            $version = "$baseVersion-$env:GITHUB_RUN_NUMBER"
+          }
           $version = $version -replace '[\\/]', '-'
 
           New-Item -ItemType Directory -Force "dist\windows" | Out-Null
