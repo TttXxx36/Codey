@@ -35,7 +35,8 @@ const sourceFiles = [
       documentQueries: /document\.querySelectorAll/g,
       timers: /setTimeout|setInterval/g,
       boundedThreadRows: /maxTrackedThreadRows/g,
-      detachedRowCleanup: /untrackThreadRowsInSubtree/g,\n      stableTrackedRowIteration: /\\[\\.\\.\\.threadUpdatedAtRows\\]\\.forEach/g,
+      detachedRowCleanup: /untrackThreadRowsInSubtree/g,
+      stableTrackedRowIteration: /\[\.\.\.threadUpdatedAtRows\]\.forEach/g,
     },
   },
   {
