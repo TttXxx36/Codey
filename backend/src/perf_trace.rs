@@ -17,22 +17,15 @@ static TRACE_STATE: OnceLock<Mutex<TraceState>> = OnceLock::new();
 fn trace_state() -> &'static Mutex<TraceState> {
     TRACE_STATE.get_or_init(|| {
         let started_at = Instant::now();
-        let enabled = std::env::var("CODEY_PERF_TRACE")
-            .ok()
-            .is_some_and(|value| {
-                matches!(
-                    value.trim().to_ascii_lowercase().as_str(),
-                    "1" | "true" | "yes"
-                )
-            });
+        let enabled = std::env::var("CODEY_PERF_TRACE").ok().is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes"
+            )
+        });
         let file = if enabled {
-            std::env::var_os("CODEY_PERF_TRACE_FILE").and_then(|path| {
-                OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(path)
-                    .ok()
-            })
+            std::env::var_os("CODEY_PERF_TRACE_FILE")
+                .and_then(|path| OpenOptions::new().create(true).append(true).open(path).ok())
         } else {
             None
         };
