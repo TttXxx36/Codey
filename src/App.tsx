@@ -13,6 +13,7 @@ import { invoke } from "./api";
 import { TraceLogModule } from "./TraceLogModule";
 import { ModelPickerDialog } from "./AppDialogs";
 import { CodexAppearanceCard } from "./CodexAppearanceCard";
+import "./styles.codex-appearance.css";
 import { FeaturePolicyCard, SubagentPolicyCard } from "./FeaturePolicyCard";
 import { ModelSection } from "./ModelSection";
 import { OperationsPanel } from "./OperationsPanel";
