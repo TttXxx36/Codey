@@ -235,7 +235,6 @@ impl PromptOptimizationConfig {
     }
 }
 
-
 /// Appearance settings applied to the Codex renderer. The image is kept as a
 /// bounded data URL so Codey can restore it without a Windows wallpaper or a
 /// separate watcher process.
@@ -271,12 +270,7 @@ impl Default for CodexAppearanceConfig {
 impl CodexAppearanceConfig {
     pub(crate) fn normalize(&mut self) {
         self.background_data_url = self.background_data_url.trim().to_string();
-        self.background_file_name = self
-            .background_file_name
-            .trim()
-            .chars()
-            .take(128)
-            .collect();
+        self.background_file_name = self.background_file_name.trim().chars().take(128).collect();
         self.background_opacity = self.background_opacity.clamp(0, 100);
         self.surface_opacity = self.surface_opacity.clamp(0, 80);
         self.chat_width = self.chat_width.clamp(800, 1800);
