@@ -64,6 +64,10 @@ test("renderer core waits for sidebar interaction before loading session tools",
   assert.match(sessionTools, /window\.__codeyRendererInvalidateHeaderMount\?\.\(root\)/);
   assert.doesNotMatch(sessionTools, /headerMountDirty/);
   assert.match(sessionTools, /const threadUpdatedAtRows = new Set\(\)/);
+  assert.match(sessionTools, /const maxTrackedThreadRows = maxSessionCacheEntries/);
+  assert.match(sessionTools, /rememberBoundedSetValue\(threadUpdatedAtRows, row, maxTrackedThreadRows\)/);
+  assert.match(sessionTools, /const untrackThreadRowsInSubtree = \(root\) =>/);
+  assert.match(sessionTools, /\[\.\.\.threadUpdatedAtRows\]\.forEach/);
   assert.match(sessionTools, /window\.__codeySessionToolsInjectLoading = true/);
   assert.match(sessionTools, /if \(window\.__codeySessionToolsInjectLoading\) return/);
   assert.match(sessionTools, /const scheduleInitialScan = \(\) =>/);
@@ -94,7 +98,7 @@ test("renderer core waits for sidebar interaction before loading session tools",
     /flushThreadUpdatedAtFetch[\s\S]*queryWithin\(document, "\[data-app-action-sidebar-thread-row\]"\)/,
   );
   const sessionObserverBody = sessionTools.match(
-    /new MutationObserver\(\(mutations\) => \{([\s\S]*?)\}\)\.observe\(document\.documentElement/,
+    /new MutationObserver\(\(mutations\) => \{([\s\S]*?)\}\)\.observe\(document\.querySelector\("#root"\) \|\| document\.documentElement/,
   )?.[1] ?? "";
   assert.match(sessionObserverBody, /addPendingScanRoot\(threadRow\)/);
   assert.doesNotMatch(sessionObserverBody, /syncSidebarThreadTimeState\(threadRow\)/);

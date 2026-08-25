@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 fn main() {
+    codey_lib::performance_trace_start();
     codey_lib::install_crash_log_hook("codey", "runtime.codey");
     if let Err(error) = run() {
         let error = format!("{error:#}");

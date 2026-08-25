@@ -35,6 +35,7 @@
   let observedToolbar = null;
   let mutationObserver = null;
   let appearanceObserverTimer = 0;
+  const delayedSyncTimers = new Set();
   let appearanceMountDirty = true;
   let configChangeHandler = null;
   let resizeHandler = null;
@@ -299,6 +300,15 @@
     }, 50);
   }
 
+  function scheduleDelayedSync(delay) {
+    const timer = window.setTimeout(() => {
+      delayedSyncTimers.delete(timer);
+      scheduleAppearanceButtonSync();
+      scheduleSync();
+    }, delay);
+    delayedSyncTimers.add(timer);
+  }
+
   function apply(nextSettings) {
     const next = normalizeSettings(nextSettings);
     const wasOwner = ownsBackground;
@@ -397,6 +407,8 @@
   function destroy() {
     if (syncTimer) window.clearTimeout(syncTimer);
     if (appearanceObserverTimer) window.clearTimeout(appearanceObserverTimer);
+    for (const timer of delayedSyncTimers) window.clearTimeout(timer);
+    delayedSyncTimers.clear();
     appearanceObserverTimer = 0;
     syncTimer = 0;
     resizeObserver?.disconnect?.();
@@ -465,10 +477,5 @@
 
   apply(settings);
   ensureAppearanceButton();
-  for (const delay of [100, 500, 1500, 3000]) {
-    window.setTimeout(() => {
-      scheduleAppearanceButtonSync();
-      scheduleSync();
-    }, delay);
-  }
+  for (const delay of [100, 500, 1500, 3000]) scheduleDelayedSync(delay);
 })();

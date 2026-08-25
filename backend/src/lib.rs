@@ -21,6 +21,7 @@ mod model_list;
 mod native_update_ui;
 mod notifications;
 mod pending_approval;
+mod perf_trace;
 mod pet_slim_patch;
 mod plugin_marketplace;
 mod process_cleanup;
@@ -69,6 +70,14 @@ pub fn run_error_log_helper_if_requested() -> Result<bool> {
     error_log::run_helper_if_requested()
 }
 
+pub fn performance_trace_start() {
+    perf_trace::start();
+}
+
+pub fn performance_trace_mark(stage: &str) {
+    perf_trace::mark(stage);
+}
+
 pub fn install_crash_log_hook(component: &'static str, stage: &'static str) {
     error_log::install_panic_hook(component, stage);
 }
@@ -111,6 +120,7 @@ pub fn run_fastctx_route_hook_if_requested() -> Result<bool> {
 }
 
 pub fn run_desktop_application() -> Result<()> {
+    perf_trace::mark("native_ui_start");
     #[cfg(target_os = "macos")]
     {
         native_update_ui::run_macos_application(|ui| build_async_runtime()?.block_on(run(ui)))
@@ -119,6 +129,7 @@ pub fn run_desktop_application() -> Result<()> {
     #[cfg(not(target_os = "macos"))]
     {
         let ui = NativeUpdateUi::start();
+        perf_trace::mark("native_ui_ready");
         let result = build_async_runtime()?.block_on(run(ui.clone()));
         ui.shutdown();
         result
@@ -135,9 +146,11 @@ fn build_async_runtime() -> Result<tokio::runtime::Runtime> {
 }
 
 async fn run(ui: NativeUpdateUi) -> Result<()> {
+    perf_trace::mark("app_run_entered");
     error_log::initialize();
     let state = Arc::new(AppState::default());
     let codex_home = codex_config::codex_home();
+    perf_trace::mark("codex_home_resolved");
     if let Err(error) = launcher::restore_previous_runtime_state(codex_home).await {
         error_log::record_failure_with_metadata(
             "restore_failed",
@@ -166,6 +179,7 @@ async fn run(ui: NativeUpdateUi) -> Result<()> {
             eprintln!("修复旧版 Codey 模型目录失败：{error:#}");
         }
     }
+    perf_trace::mark("pre_runtime_repairs_complete");
     let mut shutdown = Box::pin(shutdown_signal());
     // Update discovery is optional network work. Start it only after the
     // runtime has launched so a slow or unavailable update endpoint cannot
@@ -174,6 +188,7 @@ async fn run(ui: NativeUpdateUi) -> Result<()> {
     let shutdown_reason = 'runtime: loop {
         match commands::launch_codey_runtime(&state).await {
             Ok(_) => {
+                perf_trace::mark("runtime_ready");
                 if startup_update_task.is_none() {
                     let update_state = Arc::clone(&state);
                     let update_ui = ui.clone();

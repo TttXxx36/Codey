@@ -108,6 +108,7 @@
   const maxPendingThreadTimestampRefs = 200;
   const fallbackSessionExportMaxBytes = 64 * 1024 * 1024;
   const maxSessionCacheEntries = 2_048;
+  const maxTrackedThreadRows = maxSessionCacheEntries;
   const maxHardDeletedMessageKeys = 10_000;
   const maxPendingScanRoots = 64;
   const projectRunningRecoveryClickCooldownMs = 1_000;
@@ -1370,7 +1371,7 @@
     if (!(identity instanceof HTMLElement)) return "";
     const sessionId = normalizeThreadSessionId(threadSessionIdFromRow(identity));
     if (!sessionId) return "";
-    threadUpdatedAtRows.add(row);
+    rememberBoundedSetValue(threadUpdatedAtRows, row, maxTrackedThreadRows);
     const timestamp = threadUpdatedAtCache.get(
       threadTimestampCacheKey(threadHostIdFromRow(row), sessionId),
     );
@@ -1379,12 +1380,22 @@
   };
 
   const forEachTrackedThreadRow = (callback) => {
-    threadUpdatedAtRows.forEach((row) => {
+    [...threadUpdatedAtRows].forEach((row) => {
       if (!(row instanceof HTMLElement) || row.isConnected === false) {
         threadUpdatedAtRows.delete(row);
         return;
       }
       callback(row);
+    });
+  };
+
+  const untrackThreadRowsInSubtree = (root) => {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.matches?.(sidebarThreadRowSelector)) {
+      threadUpdatedAtRows.delete(root);
+    }
+    root.querySelectorAll?.(sidebarThreadRowSelector).forEach((row) => {
+      threadUpdatedAtRows.delete(row);
     });
   };
 
@@ -2770,6 +2781,7 @@
       for (const node of mutation.removedNodes || []) {
         const element = node instanceof HTMLElement ? node : null;
         if (!element) continue;
+        untrackThreadRowsInSubtree(element);
         const threadRow = target?.closest?.(sidebarThreadRowSelector) || null;
         if (threadRow && !isCodeyOwned(target)) {
           addPendingScanRoot(threadRow);
@@ -2782,7 +2794,7 @@
     if (pendingScanRoots.size) {
       scheduleIncrementalScan(null);
     }
-  }).observe(document.documentElement, {
+  }).observe(document.querySelector("#root") || document.documentElement, {
     attributes: true,
     attributeOldValue: true,
     attributeFilter: [

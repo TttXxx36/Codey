@@ -20,6 +20,7 @@ use super::{
 use crate::codex_config::codex_home;
 use crate::error_log;
 use crate::launcher::{CodeyRuntime, restore_previous_runtime_state, restore_runtime_config};
+use crate::perf_trace;
 
 pub(crate) const CC_SWITCH_ROUTE_RECOVERY_INTERVAL: Duration = Duration::from_secs(1);
 pub(crate) const CC_SWITCH_ROUTE_RECOVERY_STABLE_READS: u8 = 2;
@@ -371,6 +372,7 @@ async fn forward_codex_exit_to_codey_shutdown(
 }
 
 async fn launch_codey_inner_locked(state: &Arc<AppState>) -> Result<Value, String> {
+    perf_trace::mark("launch_codey_inner.begin");
     ensure_runtime_can_start(state)?;
     if state.runtime.lock().await.is_some() {
         return Ok(json!({"status":"already_running"}));
@@ -381,9 +383,12 @@ async fn launch_codey_inner_locked(state: &Arc<AppState>) -> Result<Value, Strin
     restore_previous_runtime_state(codex_home())
         .await
         .map_err(|error| format!("恢复上次 Codey 临时 Codex 配置失败：{error}"))?;
+    perf_trace::mark("launch_codey_inner.previous_state_restored");
     prepare_routes_for_current_launch(state).await?;
+    perf_trace::mark("launch_codey_inner.routes_prepared");
     let imported_default_route = super::ensure_default_route_imported(state).await;
     let config = sync_provider_models_for_launch(state, imported_default_route).await;
+    perf_trace::mark("launch_codey_inner.config_ready");
     let initial_scan_task = if webhook_watcher_should_run(&config) {
         let initial_event_cache = state
             .recent_session_event_cache
@@ -400,6 +405,7 @@ async fn launch_codey_inner_locked(state: &Arc<AppState>) -> Result<Value, Strin
         return Err(error);
     }
     let handler = make_bridge_handler(state);
+    perf_trace::mark("launch_codey_inner.runtime_start_begin");
     let (runtime, codex_exit, route_changed) = match CodeyRuntime::start(
         &config,
         handler,
@@ -423,6 +429,7 @@ async fn launch_codey_inner_locked(state: &Arc<AppState>) -> Result<Value, Strin
         ));
     }
     *state.runtime.lock().await = Some(Arc::new(runtime));
+    perf_trace::mark("launch_codey_inner.runtime_registered");
     let runtime_generation = state.runtime_generation.fetch_add(1, Ordering::AcqRel) + 1;
     if let Some(initial_scan_task) = initial_scan_task {
         start_waiting_webhook_watcher(state, initial_scan_task).await;

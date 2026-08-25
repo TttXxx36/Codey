@@ -30,6 +30,7 @@ use crate::local_router::{self, LocalRouter, ROUTER_PROVIDER_ID, RuntimeRouterEn
 use crate::maintenance_lock;
 use crate::message_delete;
 use crate::model_catalog;
+use crate::perf_trace;
 use crate::pet_slim_patch;
 use crate::provider_lease;
 use crate::session_index_cleanup::{self, SessionIndexCleanupReport};
@@ -206,6 +207,7 @@ async fn run_startup_session_maintenance(
     home: &std::path::Path,
     provider: &str,
 ) -> Result<SessionMaintenanceSummary> {
+    perf_trace::mark("startup_maintenance.begin");
     let maintenance_home = home.to_path_buf();
     let maintenance_provider = provider.to_string();
     let maintenance_result = tokio::task::spawn_blocking(move || {
@@ -356,7 +358,9 @@ async fn run_startup_session_maintenance(
             }),
         );
     }
-    Ok(session_maintenance_summary(&provider_sync, &index_cleanup))
+    let summary = session_maintenance_summary(&provider_sync, &index_cleanup);
+    perf_trace::mark("startup_maintenance.complete");
+    Ok(summary)
 }
 
 async fn resolve_configured_codex_app_dir(config: &CodeyConfig) -> Result<PathBuf> {
@@ -1186,23 +1190,27 @@ async fn resolve_startup_route_context(
 async fn prepare_startup_storage(
     home: &std::path::Path,
     config: &CodeyConfig,
+    app_dir: PathBuf,
     persistent_session_provider: &str,
     guards: InitialStorageGuards,
     trace_log_write_protection_active: &AtomicBool,
     crashpad_pending_stats: &CrashpadPendingStatsHandle,
 ) -> Result<StartupStorageState> {
-    let app_dir = resolve_configured_codex_app_dir(config).await?;
     // Session repair must never race a live Codex writer. Stopping the old
     // runtime first also gives SQLite and rollout buffers a chance to flush
     // before any permanent maintenance is applied.
+    perf_trace::mark("startup_storage.prepare_codex_begin");
     prepare_codex_for_launch(&app_dir).await?;
+    perf_trace::mark("startup_storage.prepare_codex_complete");
 
     // Permanent maintenance runs before Codey creates the temporary
     // direct-provider lease. A lightweight header/SQLite validation normally
     // reuses the last successful provider sync; provider changes still
     // fall back to the complete rollout and SQLite repair.
+    perf_trace::mark("startup_storage.maintenance_begin");
     let session_maintenance =
         run_startup_session_maintenance(home, persistent_session_provider).await?;
+    perf_trace::mark("startup_storage.maintenance_complete");
     await_initial_storage_guards(
         guards.trace,
         config.disable_trace_log_writes,
@@ -1212,6 +1220,7 @@ async fn prepare_startup_storage(
         crashpad_pending_stats,
     )
     .await?;
+    perf_trace::mark("startup_storage.guards_complete");
     Ok(StartupStorageState {
         app_dir,
         session_maintenance,
@@ -1347,6 +1356,7 @@ async fn spawn_and_inject_runtime(
     patch: &StartupPatchState,
     runtime_config_overrides: &[String],
 ) -> Result<SpawnedRenderer> {
+    perf_trace::mark("runtime_spawn.begin");
     let mut spawned = match spawn_codex(
         &storage.app_dir,
         patch.debug_port,
@@ -1362,6 +1372,7 @@ async fn spawn_and_inject_runtime(
             return Err(restore_runtime_config_after_error(home, error).await);
         }
     };
+    perf_trace::mark("runtime_spawn.process_ready");
     let maintenance = MaintenanceStatus {
         session_status: storage.session_maintenance.status,
         session_files_fixed: storage.session_maintenance.files_fixed,
@@ -1371,6 +1382,7 @@ async fn spawn_and_inject_runtime(
         performance_detail: spawned.performance_detail.clone(),
     };
     let child = Arc::new(Mutex::new(spawned.child.take()));
+    perf_trace::mark("runtime_injection.begin");
     let injected_target = inject_initial_renderer(
         patch.debug_port,
         handler.clone(),
@@ -1381,6 +1393,7 @@ async fn spawn_and_inject_runtime(
         &child,
     )
     .await?;
+    perf_trace::mark("runtime_injection.complete");
     Ok(SpawnedRenderer {
         app_dir: storage.app_dir,
         spawned,
@@ -1512,35 +1525,61 @@ impl CodeyRuntime {
     ) -> Result<(Self, oneshot::Receiver<()>, Option<oneshot::Receiver<()>>)> {
         let home = codex_home();
         trace_log_write_protection_active.store(false, Ordering::Release);
-        let injection_scripts = cdp::prepare_injection_scripts_with_appearance(
-            config.slim_codex_pet,
-            config.hide_full_access_warning,
-            &config.codex_appearance,
-            &config.user_scripts,
-        );
+        perf_trace::mark("runtime_start.enter");
+        let appearance = config.codex_appearance.clone();
+        let user_scripts = config.user_scripts.clone();
+        let slim_codex_pet = config.slim_codex_pet;
+        let hide_full_access_warning = config.hide_full_access_warning;
+        let injection_scripts_task = tokio::task::spawn_blocking(move || {
+            cdp::prepare_injection_scripts_with_appearance(
+                slim_codex_pet,
+                hide_full_access_warning,
+                &appearance,
+                &user_scripts,
+            )
+        });
         let initial_storage_guards = spawn_initial_storage_guards(home, config);
-        let route = resolve_startup_route_context(home, config).await?;
+        let app_dir_task = resolve_configured_codex_app_dir(config);
+        let route_task = resolve_startup_route_context(home, config);
         // Runtime-only Codey route ids are intentionally absent from the
         // user's config.toml. Persisted rollout and SQLite metadata must stay
         // on the provider that the unmodified desktop app can also resolve.
-        let persistent_session_provider = resolve_persistent_session_provider(home).await?;
-        let storage = prepare_startup_storage(
+        let persistent_provider_task = resolve_persistent_session_provider(home);
+        let (injection_scripts, app_dir, route, persistent_session_provider) = tokio::try_join!(
+            async {
+                injection_scripts_task
+                    .await
+                    .context("准备 Codex 注入脚本任务异常退出")
+            },
+            app_dir_task,
+            route_task,
+            persistent_provider_task,
+        )?;
+        perf_trace::mark("runtime_start.preflight_complete");
+
+        let storage_task = prepare_startup_storage(
             home,
             config,
+            app_dir,
             &persistent_session_provider,
             initial_storage_guards,
             trace_log_write_protection_active,
             &crashpad_pending_stats,
-        )
-        .await?;
-        let local_router = Some(LocalRouter::start(config).await?);
+        );
+        let router_task = LocalRouter::start(config);
+        let (storage, local_router) = tokio::try_join!(storage_task, router_task)?;
+        let local_router = Some(local_router);
+        perf_trace::mark("runtime_start.storage_and_router_complete");
+        perf_trace::mark("runtime_start.provider_state_begin");
         let PreparedProviderState {
             applied_route_files,
             runtime_config,
             runtime_config_overrides,
         } = prepare_runtime_provider_state(home, config, &route, local_router.as_ref()).await?;
+        perf_trace::mark("runtime_start.provider_state_complete");
         let patch =
             prepare_startup_patches_and_overlay(home, config, applied_route_files.as_ref()).await?;
+        perf_trace::mark("runtime_start.patches_complete");
         let SpawnedRenderer {
             app_dir,
             spawned,
@@ -1557,6 +1596,7 @@ impl CodeyRuntime {
             &runtime_config_overrides,
         )
         .await?;
+        perf_trace::mark("runtime_start.codex_injected");
         #[cfg(target_os = "macos")]
         let inspector_argument = spawned.inspector_argument.clone();
         let process_id = spawned.process_id;
@@ -1581,6 +1621,7 @@ impl CodeyRuntime {
             protect_crashpad_pending: config.protect_crashpad_pending,
             crashpad_pending_stats,
         });
+        perf_trace::mark("runtime_start.watchers_ready");
         Ok((
             Self {
                 codex_app_path: app_dir,
