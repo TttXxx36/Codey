@@ -25,6 +25,14 @@ export type PromptOptimizationConfig = {
   instruction: string;
 };
 
+export type CodexAppearanceConfig = {
+  backgroundDataUrl: string;
+  backgroundFileName: string;
+  backgroundOpacity: number;
+  surfaceOpacity: number;
+  chatWidth: number;
+};
+
 export type SubagentRoleId =
   | "codey_quick_scan"
   | "codey_deep_research"
@@ -47,6 +55,7 @@ export type Config = {
   promptOptimization: PromptOptimizationConfig;
   codexAppPath: string;
   userScripts: string[];
+  codexAppearance?: CodexAppearanceConfig;
   selectedModelsByProvider: Record<string, string[]>;
   manualThirdPartyModelsByProvider: Record<string, string[]>;
   declaredOfficialModelsByProvider: Record<string, string[]>;
