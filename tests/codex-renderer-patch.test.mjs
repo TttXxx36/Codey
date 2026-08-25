@@ -733,10 +733,11 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     await waitForVerifier(() => cappedClient.requests.length === 9);
     assert.equal(cappedClient.requests.length, 9);
     assert.equal(
-      secondCappedSnapshot.descendantThreads.every(({ status }) =>
-        status.type === "idle"
+      cappedThreads.every(({ id }) =>
+        cappedStore.projectedStatus(secondCappedSnapshot, id) === "idle"
       ),
       true,
+      "the next native snapshot observes the idle evidence published in the background",
     );
     assert.equal(
       globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__.snapshot()
