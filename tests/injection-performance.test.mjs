@@ -67,6 +67,7 @@ test("renderer core waits for sidebar interaction before loading session tools",
   assert.match(sessionTools, /const maxTrackedThreadRows = maxSessionCacheEntries/);
   assert.match(sessionTools, /rememberBoundedSetValue\(threadUpdatedAtRows, row, maxTrackedThreadRows\)/);
   assert.match(sessionTools, /const untrackThreadRowsInSubtree = \(root\) =>/);
+  assert.match(sessionTools, /\[\.\.\.threadUpdatedAtRows\]\.forEach/);
   assert.match(sessionTools, /window\.__codeySessionToolsInjectLoading = true/);
   assert.match(sessionTools, /if \(window\.__codeySessionToolsInjectLoading\) return/);
   assert.match(sessionTools, /const scheduleInitialScan = \(\) =>/);
