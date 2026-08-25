@@ -11,6 +11,7 @@ use codey_runtime_core::bridge::{
 use codey_runtime_core::cdp::{CdpTarget, list_targets, pick_injectable_codex_page_target};
 use serde::{Deserialize, Serialize};
 
+use crate::config::CodexAppearanceConfig;
 use crate::error_log;
 
 const SETTINGS_OVERLAY_LOAD_PATH: &str = "/internal/codey/settings-overlay/load";
@@ -39,6 +40,8 @@ const SETTINGS_OVERLAY_SCRIPT: &str = include_str!("../../dist-overlay/codey-ove
 const PLUGIN_MARKETPLACE_FIX_SCRIPT: &str =
     include_str!("../../dist-overlay/inject/plugin-marketplace-fix.js");
 const PROMPT_OPTIMIZE_SCRIPT: &str = include_str!("../../dist-overlay/inject/prompt-optimize.js");
+const CODEX_APPEARANCE_SCRIPT: &str =
+    include_str!("../../dist-overlay/inject/codex-appearance.js");
 const MAX_INJECTION_ERROR_CHARS: usize = 500;
 static SETTINGS_OVERLAY_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
 static SESSION_TOOLS_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
@@ -210,9 +213,40 @@ pub fn prepare_injection_scripts(
     )
 }
 
+pub fn prepare_injection_scripts_with_appearance(
+    slim_codex_pet: bool,
+    hide_full_access_warning: bool,
+    appearance: &CodexAppearanceConfig,
+    user_scripts: &[String],
+) -> PreparedInjectionScripts {
+    prepare_injection_scripts_for_platform_with_appearance(
+        slim_codex_pet,
+        hide_full_access_warning,
+        Some(appearance),
+        user_scripts,
+        InjectionHostPlatform::current(),
+    )
+}
+
 fn prepare_injection_scripts_for_platform(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
+    user_scripts: &[String],
+    platform: InjectionHostPlatform,
+) -> PreparedInjectionScripts {
+    prepare_injection_scripts_for_platform_with_appearance(
+        slim_codex_pet,
+        hide_full_access_warning,
+        None,
+        user_scripts,
+        platform,
+    )
+}
+
+fn prepare_injection_scripts_for_platform_with_appearance(
+    slim_codex_pet: bool,
+    hide_full_access_warning: bool,
+    appearance: Option<&CodexAppearanceConfig>,
     user_scripts: &[String],
     platform: InjectionHostPlatform,
 ) -> PreparedInjectionScripts {
@@ -464,6 +498,7 @@ fn prepare_injection_scripts_for_platform(
             + SECURITY_WARNING_SHIELD_SCRIPT.len()
             + PLUGIN_MARKETPLACE_FIX_SCRIPT.len()
             + PROMPT_OPTIMIZE_SCRIPT.len()
+            + CODEX_APPEARANCE_SCRIPT.len()
             + 4096,
     );
     let mut descriptors = Vec::with_capacity(builtin_scripts.len() + user_scripts.len());
@@ -478,7 +513,30 @@ fn prepare_injection_scripts_for_platform(
             visibility,
             probe: Some(probe),
         };
-        let prepared = prepare_script(script, slim_codex_pet);
+        let prepared = prepare_script(script, slim_codex_pet, None);
+        append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
+        descriptors.push(descriptor);
+    }
+
+    if let Some(appearance) = appearance {
+        let descriptor = InjectionScriptDescriptor {
+            id: "codex-appearance".to_string(),
+            name: "Codex 外观调整".to_string(),
+            source: "builtin",
+            visibility: Feature,
+            probe: Some(
+                r#"(() => {
+                  const controller = window.__codeyCodexAppearance;
+                  if (!controller || typeof controller.snapshot !== "function") return "";
+                  const snapshot = controller.snapshot();
+                  return snapshot.ownsBackground === true
+                    ? `Codex 背景、对话宽度和界面遮罩已生效（宽度 ${snapshot.chatWidth}px）`
+                    : { effective: false, inactive: true, detail: "Codex 外观控制器已就绪，当前未设置背景图片" };
+                })()"#
+                    .to_string(),
+            ),
+        };
+        let prepared = prepare_script(CODEX_APPEARANCE_SCRIPT, slim_codex_pet, Some(appearance));
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
         descriptors.push(descriptor);
     }
@@ -508,14 +566,25 @@ fn prepare_injection_scripts_for_platform(
     }
 }
 
-fn prepare_script(script: &str, slim_codex_pet: bool) -> Cow<'_, str> {
-    if !script.contains("__CODEY_SLIM_PET__") {
-        return Cow::Borrowed(script);
+fn prepare_script(
+    script: &str,
+    slim_codex_pet: bool,
+    appearance: Option<&CodexAppearanceConfig>,
+) -> Cow<'_, str> {
+    let mut prepared = None;
+    if script.contains("__CODEY_SLIM_PET__") {
+        prepared = Some(script.replace(
+            "__CODEY_SLIM_PET__",
+            if slim_codex_pet { "true" } else { "false" },
+        ));
     }
-    Cow::Owned(script.replace(
-        "__CODEY_SLIM_PET__",
-        if slim_codex_pet { "true" } else { "false" },
-    ))
+    if script.contains("__CODEY_CODEX_APPEARANCE_SETTINGS__") {
+        let settings = serde_json::to_string(appearance.cloned().unwrap_or_default())
+            .expect("Codex appearance settings should serialize");
+        let source = prepared.as_deref().unwrap_or(script);
+        prepared = Some(source.replace("__CODEY_CODEX_APPEARANCE_SETTINGS__", &settings));
+    }
+    prepared.map(Cow::Owned).unwrap_or(Cow::Borrowed(script))
 }
 
 fn append_guarded_script(
