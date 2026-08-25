@@ -1380,7 +1380,7 @@
   };
 
   const forEachTrackedThreadRow = (callback) => {
-    threadUpdatedAtRows.forEach((row) => {
+    [...threadUpdatedAtRows].forEach((row) => {
       if (!(row instanceof HTMLElement) || row.isConnected === false) {
         threadUpdatedAtRows.delete(row);
         return;
