@@ -1199,7 +1199,9 @@ async fn prepare_startup_storage(
     // Session repair must never race a live Codex writer. Stopping the old
     // runtime first also gives SQLite and rollout buffers a chance to flush
     // before any permanent maintenance is applied.
+    perf_trace::mark("startup_storage.prepare_codex_begin");
     prepare_codex_for_launch(&app_dir).await?;
+    perf_trace::mark("startup_storage.prepare_codex_complete");
 
     // Permanent maintenance runs before Codey creates the temporary
     // direct-provider lease. A lightweight header/SQLite validation normally
@@ -1354,6 +1356,7 @@ async fn spawn_and_inject_runtime(
     patch: &StartupPatchState,
     runtime_config_overrides: &[String],
 ) -> Result<SpawnedRenderer> {
+    perf_trace::mark("runtime_spawn.begin");
     let mut spawned = match spawn_codex(
         &storage.app_dir,
         patch.debug_port,
@@ -1369,6 +1372,7 @@ async fn spawn_and_inject_runtime(
             return Err(restore_runtime_config_after_error(home, error).await);
         }
     };
+    perf_trace::mark("runtime_spawn.process_ready");
     let maintenance = MaintenanceStatus {
         session_status: storage.session_maintenance.status,
         session_files_fixed: storage.session_maintenance.files_fixed,
@@ -1378,6 +1382,7 @@ async fn spawn_and_inject_runtime(
         performance_detail: spawned.performance_detail.clone(),
     };
     let child = Arc::new(Mutex::new(spawned.child.take()));
+    perf_trace::mark("runtime_injection.begin");
     let injected_target = inject_initial_renderer(
         patch.debug_port,
         handler.clone(),
@@ -1388,6 +1393,7 @@ async fn spawn_and_inject_runtime(
         &child,
     )
     .await?;
+    perf_trace::mark("runtime_injection.complete");
     Ok(SpawnedRenderer {
         app_dir: storage.app_dir,
         spawned,
