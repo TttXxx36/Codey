@@ -12,6 +12,7 @@ import {
 import { invoke } from "./api";
 import { TraceLogModule } from "./TraceLogModule";
 import { ModelPickerDialog } from "./AppDialogs";
+import { CodexAppearanceCard } from "./CodexAppearanceCard";
 import { FeaturePolicyCard, SubagentPolicyCard } from "./FeaturePolicyCard";
 import { ModelSection } from "./ModelSection";
 import { OperationsPanel } from "./OperationsPanel";
@@ -1271,6 +1272,15 @@ export function App({
                 onSubagentOptimizationChange={handleSubagentOptimizationChange}
               />
             </div>
+          </div>
+
+          {/* Codex 外观：背景、对话宽度与界面遮罩 */}
+          <div className="full-row-section">
+            <CodexAppearanceCard
+              config={config}
+              isBusy={isBusy}
+              onConfigChange={editConfig}
+            />
           </div>
 
           {/* Codex 功能策略：整行排列 */}
