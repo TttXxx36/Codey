@@ -235,6 +235,73 @@ impl PromptOptimizationConfig {
     }
 }
 
+
+/// Appearance settings applied to the Codex renderer. The image is kept as a
+/// bounded data URL so Codey can restore it without a Windows wallpaper or a
+/// separate watcher process.
+pub const CODEX_APPEARANCE_MAX_DATA_URL_CHARS: usize = 8_000_000;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CodexAppearanceConfig {
+    #[serde(default)]
+    pub background_data_url: String,
+    #[serde(default)]
+    pub background_file_name: String,
+    #[serde(default = "default_codex_background_opacity")]
+    pub background_opacity: u16,
+    #[serde(default = "default_codex_surface_opacity")]
+    pub surface_opacity: u16,
+    #[serde(default = "default_codex_chat_width")]
+    pub chat_width: u16,
+}
+
+impl Default for CodexAppearanceConfig {
+    fn default() -> Self {
+        Self {
+            background_data_url: String::new(),
+            background_file_name: String::new(),
+            background_opacity: default_codex_background_opacity(),
+            surface_opacity: default_codex_surface_opacity(),
+            chat_width: default_codex_chat_width(),
+        }
+    }
+}
+
+impl CodexAppearanceConfig {
+    pub(crate) fn normalize(&mut self) {
+        self.background_data_url = self.background_data_url.trim().to_string();
+        self.background_file_name = self
+            .background_file_name
+            .trim()
+            .chars()
+            .take(128)
+            .collect();
+        self.background_opacity = self.background_opacity.clamp(0, 100);
+        self.surface_opacity = self.surface_opacity.clamp(0, 80);
+        self.chat_width = self.chat_width.clamp(800, 1800);
+        if self.background_data_url.is_empty()
+            || !self.background_data_url.starts_with("data:image/")
+            || self.background_data_url.len() > CODEX_APPEARANCE_MAX_DATA_URL_CHARS
+        {
+            self.background_data_url.clear();
+            self.background_file_name.clear();
+        }
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), String> {
+        if self.background_data_url.len() > CODEX_APPEARANCE_MAX_DATA_URL_CHARS {
+            return Err("Codex 背景图片过大，请选择较小的图片后重试".to_string());
+        }
+        if !self.background_data_url.is_empty()
+            && !self.background_data_url.starts_with("data:image/")
+        {
+            return Err("Codex 背景图片格式无效，请重新选择图片".to_string());
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum GpuLaunchMode {
@@ -306,6 +373,8 @@ pub struct CodeyConfig {
     pub codex_app_path: String,
     #[serde(default)]
     pub user_scripts: Vec<String>,
+    #[serde(default)]
+    pub codex_appearance: CodexAppearanceConfig,
     /// Codey-owned model selections. Provider connection data remains owned
     /// by cc-switch (or the local Codex configuration).
     #[serde(default)]
@@ -407,6 +476,7 @@ impl Default for CodeyConfig {
             prompt_optimization: PromptOptimizationConfig::default(),
             codex_app_path: String::new(),
             user_scripts: Vec::new(),
+            codex_appearance: CodexAppearanceConfig::default(),
             selected_models_by_provider: BTreeMap::new(),
             manual_third_party_models_by_provider: BTreeMap::new(),
             declared_official_models_by_provider: BTreeMap::new(),
@@ -498,6 +568,7 @@ impl CodeyConfig {
         }
         self.webhook.normalize();
         self.prompt_optimization.normalize();
+        self.codex_appearance.normalize();
         self
     }
 
