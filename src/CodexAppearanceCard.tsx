@@ -6,7 +6,15 @@ import {
 } from "@tabler/icons-react";
 
 import type { CodexAppearanceConfig, Config } from "./App.types";
-import { Badge, Button, Card } from "./components/semi";
+import { Badge, Button, Card } from "./components/mantine";
+
+const DEFAULT_APPEARANCE: CodexAppearanceConfig = {
+  backgroundDataUrl: "",
+  backgroundFileName: "",
+  backgroundOpacity: 70,
+  surfaceOpacity: 38,
+  chatWidth: 1200,
+};
 
 const MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2400;
@@ -64,7 +72,7 @@ export function CodexAppearanceCard({
 }: CodexAppearanceCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState("");
-  const appearance = config.codexAppearance;
+  const appearance = config.codexAppearance ?? DEFAULT_APPEARANCE;
 
   const updateAppearance = (patch: Partial<CodexAppearanceConfig>) => {
     onConfigChange({
