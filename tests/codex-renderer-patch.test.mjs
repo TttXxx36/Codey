@@ -730,7 +730,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       "background verification publishes idle evidence without blocking the snapshot promise",
     );
     const secondCappedSnapshot = await cappedTopology.discover("parent-cap");
-    await waitForVerifier(() => cappedClient.requests.length === 9);
+    await waitForVerifier(() => cappedClient.requests.length === 9 && cappedStore.recordedStatuses.length === 9);
     assert.equal(cappedClient.requests.length, 9);
     assert.equal(
       cappedThreads.every(({ id }) =>
