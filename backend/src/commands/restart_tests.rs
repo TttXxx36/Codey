@@ -42,8 +42,10 @@ fn api_key_launch_rejects_new_or_active_official_account_routes() {
 
 #[test]
 fn official_account_launch_allows_official_routes() {
-    let mut previous = CodeyConfig::default();
-    previous.official_account_available_this_launch = true;
+    let previous = CodeyConfig {
+        official_account_available_this_launch: true,
+        ..CodeyConfig::default()
+    };
     let mut official = crate::config::ProviderProfile::new("Official");
     official.id = "official".into();
     official.auth_mode = crate::config::AUTH_MODE_OFFICIAL_ACCOUNT.into();
@@ -207,8 +209,10 @@ fn renderer_model_catalog_keeps_supported_models_before_configured_models() {
 
 #[test]
 fn renderer_model_catalog_keeps_official_account_models_unprefixed() {
-    let mut config = CodeyConfig::default();
-    config.official_account_available_this_launch = true;
+    let mut config = CodeyConfig {
+        official_account_available_this_launch: true,
+        ..CodeyConfig::default()
+    };
     config.profiles[0].cc_switch_provider_id = Some("openai".into());
     config.profiles[0].auth_mode = crate::config::AUTH_MODE_OFFICIAL_ACCOUNT.into();
     config.profiles[0].normalize();
