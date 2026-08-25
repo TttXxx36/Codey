@@ -1,6 +1,11 @@
 name: Refresh pnpm lockfile
 
 on:
+  push:
+    branches:
+      - master
+    paths:
+      - .github/workflows/refresh-pnpm-lockfile.yml
   workflow_dispatch:
 
 permissions:
