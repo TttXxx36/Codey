@@ -208,6 +208,7 @@
     appearanceMountDirty = false;
     return true;
   }
+
   function ensureBackground() {
     let layer = document.getElementById(BACKGROUND_ID);
     if (!(layer instanceof HTMLDivElement)) {
@@ -439,7 +440,10 @@
     const target = mutation?.target;
     if (target instanceof Element
       && (target.matches("header, nav") || target.closest("header, nav"))) return true;
-    for (const node of mutation?.addedNodes || []) {
+    for (const node of [
+      ...(mutation?.addedNodes || []),
+      ...(mutation?.removedNodes || []),
+    ]) {
       if (!(node instanceof Element)) continue;
       if (node.matches("header, nav, button[aria-label='Share'], button[aria-label='分享']")
         || node.querySelector?.("header, nav, button[aria-label='Share'], button[aria-label='分享']")) {
