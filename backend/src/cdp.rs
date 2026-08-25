@@ -41,6 +41,8 @@ const PLUGIN_MARKETPLACE_FIX_SCRIPT: &str =
     include_str!("../../dist-overlay/inject/plugin-marketplace-fix.js");
 const PROMPT_OPTIMIZE_SCRIPT: &str = include_str!("../../dist-overlay/inject/prompt-optimize.js");
 const CODEX_APPEARANCE_SCRIPT: &str = include_str!("../../dist-overlay/inject/codex-appearance.js");
+const PERFORMANCE_PROBE_SCRIPT: &str =
+    include_str!("../../dist-overlay/inject/performance-probe.js");
 const MAX_INJECTION_ERROR_CHARS: usize = 500;
 static SETTINGS_OVERLAY_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
 static SESSION_TOOLS_LOAD_SCRIPT: OnceLock<Arc<str>> = OnceLock::new();
@@ -500,6 +502,7 @@ fn prepare_injection_scripts_for_platform_with_appearance(
             + PLUGIN_MARKETPLACE_FIX_SCRIPT.len()
             + PROMPT_OPTIMIZE_SCRIPT.len()
             + CODEX_APPEARANCE_SCRIPT.len()
+            + PERFORMANCE_PROBE_SCRIPT.len()
             + 4096,
     );
     let mut descriptors = Vec::with_capacity(builtin_scripts.len() + user_scripts.len());
@@ -539,6 +542,22 @@ fn prepare_injection_scripts_for_platform_with_appearance(
         };
         let prepared = prepare_script(CODEX_APPEARANCE_SCRIPT, slim_codex_pet, Some(appearance));
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
+        descriptors.push(descriptor);
+    }
+
+    if crate::perf_trace::enabled() {
+        let descriptor = InjectionScriptDescriptor {
+            id: "performance-probe".to_string(),
+            name: "性能诊断探针".to_string(),
+            source: "builtin",
+            visibility: Internal,
+            probe: Some(
+                r#"typeof window.__codeyPerformanceProbe?.snapshot === "function"
+                  ? "长任务、帧间隔和 Chromium JS 堆探针已启用" : """#
+                    .to_string(),
+            ),
+        };
+        append_guarded_script(&mut core_bundle, &descriptor, PERFORMANCE_PROBE_SCRIPT);
         descriptors.push(descriptor);
     }
 
