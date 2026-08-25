@@ -30,8 +30,8 @@ use crate::local_router::{self, LocalRouter, ROUTER_PROVIDER_ID, RuntimeRouterEn
 use crate::maintenance_lock;
 use crate::message_delete;
 use crate::model_catalog;
-use crate::pet_slim_patch;
 use crate::perf_trace;
+use crate::pet_slim_patch;
 use crate::provider_lease;
 use crate::session_index_cleanup::{self, SessionIndexCleanupReport};
 use crate::startup_maintenance::{self, ProviderSyncPlan};
