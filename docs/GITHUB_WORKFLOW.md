@@ -6,6 +6,14 @@ The `Build Windows installer` workflow runs on pushes to `master` and on manual 
 
 Download the result from the workflow run's artifact named `codey-windows-x64-installer-<run-number>`. Artifacts are retained for 30 days.
 
+## Release
+
+The version source of truth is `package.json` and the Cargo workspace version. A commit whose message starts with `release: vX.Y.Z` runs the Windows build with a clean `X.Y.Z` installer name. After that build succeeds, the separate `Publish Windows Release` workflow creates or updates the matching GitHub Release and uploads the installer. Add matching notes at `docs/releases/vX.Y.Z.md` before creating the release commit. Ordinary commits keep the run-number suffix and only upload a 30-day Actions artifact; the build workflow itself has read-only repository permissions.
+
+## Appearance scripts and Windows startup
+
+The conversation background and width scripts remain in the repository and are still loaded when Codey is started manually. The Windows installer creates only the Start Menu and optional desktop shortcuts; it does not register these appearance scripts in the Startup folder, `Run` registry keys, or a scheduled task. The current machine was also checked and no matching startup entry was found, so the scripts are preserved without running at Windows sign-in.
+
 ## Upstream synchronization
 
 The `Sync upstream safely` workflow runs every two days at 03:17 UTC and can also be started manually. It merges `SuperGness/codey` into `master` through `scripts/sync-upstream.ps1`.
