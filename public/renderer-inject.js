@@ -904,10 +904,6 @@
       capture: true,
       passive: true,
     });
-    document.addEventListener("pointerdown", loadSessionToolsFromInteraction, {
-      capture: true,
-      passive: true,
-    });
     document.addEventListener("focusin", loadSessionToolsFromInteraction, true);
   };
 
@@ -915,7 +911,6 @@
     if (!sessionToolsInteractionArmed) return;
     sessionToolsInteractionArmed = false;
     document.removeEventListener("pointerover", loadSessionToolsFromInteraction, true);
-    document.removeEventListener("pointerdown", loadSessionToolsFromInteraction, true);
     document.removeEventListener("focusin", loadSessionToolsFromInteraction, true);
   };
 
