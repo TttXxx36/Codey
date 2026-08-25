@@ -1,8 +1,7 @@
 import { memo } from "react";
 import { IconSend } from "@tabler/icons-react";
 
-import { Button, Input } from "../components/mantine";
-import { inputShellClass, insetInputClass } from "../uiClasses";
+import { Button, Input } from "../components/semi";
 import type { NotificationChannelEditorProps } from "./types";
 
 export function createWebhookChannelEditor(emptyPlaceholder: string) {
@@ -16,10 +15,9 @@ export function createWebhookChannelEditor(emptyPlaceholder: string) {
       <>
         <label className="field">
           <span>Webhook 地址</span>
-          <div className={inputShellClass}>
+          <div className="input-shell">
             <IconSend size={15} aria-hidden="true" />
             <Input
-              className={insetInputClass}
               type={revealSecrets ? "text" : "password"}
               value={channel.url}
               disabled={disabled}
@@ -40,9 +38,8 @@ export function createWebhookChannelEditor(emptyPlaceholder: string) {
           </div>
         </label>
         {channel.urlConfigured ? (
-          <div className="-mt-[7px] flex justify-end">
+          <div className="notification-secret-action">
             <Button
-              className="text-[#8e8e93] hover:text-[#d70015]"
               variant="ghost"
               size="xs"
               disabled={disabled}

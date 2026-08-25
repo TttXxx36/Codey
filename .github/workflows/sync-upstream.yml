@@ -1,0 +1,114 @@
+name: Sync upstream safely
+
+on:
+  schedule:
+    - cron: "17 3 */2 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: upstream-sync-master
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: SuperGness/codey
+
+jobs:
+  sync:
+    name: Merge upstream without overwriting local features
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout the fork
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge upstream with the repository safety script
+        id: sync
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $upstreamUrl = "https://github.com/$env:UPSTREAM_REPOSITORY.git"
+          & "$env:GITHUB_WORKSPACE\scripts\sync-upstream.ps1" `
+            -Mode Sync `
+            -RepositoryRoot $env:GITHUB_WORKSPACE `
+            -UpstreamUrl $upstreamUrl `
+            -OriginUrl "https://github.com/${{ github.repository }}.git" `
+            -Push
+          $exitCode = $LASTEXITCODE
+          "exit_code=$exitCode" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
+
+      - name: Preserve the sync report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-sync-report-${{ github.run_number }}
+          path: .codex-sync/last-sync.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Open an issue for a merge conflict
+        if: steps.sync.outputs.exit_code == '4'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            let report = {};
+            try {
+              report = JSON.parse(fs.readFileSync('.codex-sync/last-sync.json', 'utf8'));
+            } catch (error) {
+              report = { error: String(error) };
+            }
+
+            const title = 'Codey upstream sync conflict needs review';
+            const openIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            if (!openIssues.some((issue) => issue.title === title)) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: [
+                  'The scheduled upstream merge stopped safely because Git reported conflicts.',
+                  '',
+                  `Workflow run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                  '',
+                  'No reset, clean, stash, or automatic ours/theirs selection was performed.',
+                  '',
+                  '```json',
+                  JSON.stringify(report, null, 2),
+                  '```',
+                ].join('\n'),
+              });
+            }
+
+      - name: Build a fresh Windows installer after a successful sync
+        if: steps.sync.outputs.exit_code == '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-windows-installer.yml',
+              ref: 'master',
+            });
+
+      - name: Mark a blocked or conflicted sync as failed
+        if: steps.sync.outcome == 'failure'
+        shell: pwsh
+        run: exit 1

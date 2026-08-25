@@ -12,7 +12,6 @@ pub mod fastctx;
 mod fastctx_route_gate;
 mod fs_util;
 mod launcher;
-mod local_router;
 mod maintenance_lock;
 mod message_delete;
 mod model_catalog;
@@ -167,18 +166,19 @@ async fn run(ui: NativeUpdateUi) -> Result<()> {
         }
     }
     let mut shutdown = Box::pin(shutdown_signal());
-    let startup_update = startup_update::run(&state, &ui);
-    tokio::pin!(startup_update);
-    let startup_update_outcome = tokio::select! {
-        outcome = &mut startup_update => outcome,
-        _ = &mut shutdown => return Ok(()),
-    };
-    if startup_update_outcome == startup_update::StartupUpdateOutcome::InstallScheduled {
-        return Ok(());
-    }
+    let mut startup_update_task = None;
     let shutdown_reason = 'runtime: loop {
         match commands::launch_codey_runtime(&state).await {
             Ok(_) => {
+                let update_state = Arc::clone(&state);
+                let update_ui = ui.clone();
+                startup_update_task = Some(tokio::spawn(async move {
+                    if startup_update::run(&update_state, &update_ui).await
+                        == startup_update::StartupUpdateOutcome::InstallScheduled
+                    {
+                        update_state.request_update_shutdown();
+                    }
+                }));
                 break tokio::select! {
                     reason = state.wait_for_shutdown() => match reason {
                         AppShutdownReason::CodexExited => ShutdownReason::CodexExited,
@@ -231,6 +231,11 @@ async fn run(ui: NativeUpdateUi) -> Result<()> {
             }
         }
     };
+
+    if let Some(task) = startup_update_task {
+        task.abort();
+        let _ = task.await;
+    }
 
     let cleanup = stop_runtime_with_retry(&state).await;
     if let Err(error) = &cleanup {

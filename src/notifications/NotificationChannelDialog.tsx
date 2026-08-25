@@ -22,7 +22,7 @@ import {
   DialogTitle,
   Select,
   Switch,
-} from "../components/mantine";
+} from "../components/semi";
 import { SETTINGS_OVERLAY_Z_INDEX } from "../overlay.constants";
 import {
   createNotificationChannel,
@@ -216,7 +216,7 @@ function NotificationChannelDialogComponent({
               </DialogDescription>
             </DialogHeader>
             <div className="notification-reveal-loading" role="status">
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              <LoaderCircle className="spinner" aria-hidden="true" />
               正在读取已保存配置…
             </div>
             <DialogFooter>
@@ -237,29 +237,25 @@ function NotificationChannelDialogComponent({
                   : "选择发送渠道，并填写该渠道需要的专属配置。"}
               </DialogDescription>
             </DialogHeader>
-            <div className="mt-[18px] grid gap-[7px]">
+            <div className="notification-channel-select">
               <span
                 id="notification-channel-select-label"
-                className="text-[11px] font-semibold text-[#6e6e73]"
+                className="notification-channel-select-label"
               >
                 发送渠道
               </span>
-              <div className="relative w-[min(100%,260px)]">
+              <div className="notification-channel-select-shell">
                 <Select
-                  className="w-full"
-                  inputClassName="h-10! rounded-lg! border-black/15! bg-white! text-xs font-semibold hover:border-blue-500/40! focus:border-blue-500/40! focus:ring-3 focus:ring-blue-500/8"
-                  sectionClassName="text-[#8e8e93] data-[position=right]:mr-2.5"
+                  className="notification-channel-kind-select"
                   value={draft.kind}
                   disabled={isEditing || formBusy}
                   aria-labelledby="notification-channel-select-label"
                   optionList={notificationChannelOptions}
-                  dropdownClassName="rounded-[10px]"
+                  dropdownClassName="notification-channel-select-dropdown"
                   showClear={false}
                   filter={false}
-                  leftSectionPointerEvents="none"
-                  leftSectionWidth={38}
                   prefix={
-                    <span className="grid size-[22px] shrink-0 place-items-center">
+                    <span className="notification-channel-app-icon">
                       <SelectedChannelIcon size={20} aria-hidden="true" />
                     </span>
                   }
@@ -277,14 +273,14 @@ function NotificationChannelDialogComponent({
                     if (!OptionIcon) return label;
                     return (
                       <div
-                        className={`flex min-h-[34px] w-full items-center gap-2 rounded-md px-2.5 text-left text-xs font-semibold text-[#1d1d1f] ${option.className ?? ""} ${(selected || focused) ? "bg-blue-500/8" : ""}`}
+                        className={`notification-channel-select-option ${option.className ?? ""}${selected ? " selected" : ""}${focused ? " focused" : ""}`}
                         role="option"
                         aria-selected={selected}
                         style={option.style}
                         onMouseEnter={option.onMouseEnter}
                         onClick={option.onClick}
                       >
-                        <span className="grid size-[22px] shrink-0 place-items-center">
+                        <span className="notification-channel-app-icon">
                           <OptionIcon size={20} aria-hidden="true" />
                         </span>
                         <span>{label}</span>
@@ -334,14 +330,13 @@ function NotificationChannelDialogComponent({
                   </span>
                 </div>
                 <Button
-                  className="shrink-0"
                   variant="secondary"
                   size="sm"
                   disabled={formBusy || !canTest}
                   onClick={() => void testChannel()}
                 >
                   {isTesting ? (
-                    <LoaderCircle className="animate-spin" aria-hidden="true" />
+                    <LoaderCircle className="spinner" aria-hidden="true" />
                   ) : (
                     <IconSend aria-hidden="true" />
                   )}
@@ -368,7 +363,7 @@ function NotificationChannelDialogComponent({
                 onClick={() => void saveChannel()}
               >
                 {isSaving ? (
-                  <LoaderCircle className="animate-spin" aria-hidden="true" />
+                  <LoaderCircle className="spinner" aria-hidden="true" />
                 ) : (
                   <IconCheck aria-hidden="true" />
                 )}

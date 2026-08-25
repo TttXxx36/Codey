@@ -4,28 +4,28 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("startup update preflight completes before the first Codex launch", async () => {
+test("startup update discovery begins after the first Codex launch", async () => {
   const library = await readFile(
     new URL("backend/src/lib.rs", root),
     "utf8",
   );
-  const preflight = library.indexOf("startup_update::run(&state, &ui)");
-  const installExit = library.indexOf(
-    "StartupUpdateOutcome::InstallScheduled",
-    preflight,
-  );
   const launch = library.indexOf(
     "commands::launch_codey_runtime(&state).await",
-    preflight,
+  );
+  const update = library.indexOf(
+    "startup_update::run(&update_state, &update_ui).await",
+    launch,
+  );
+  const updateShutdown = library.indexOf(
+    "update_state.request_update_shutdown()",
+    update,
   );
 
-  assert.notEqual(preflight, -1);
-  assert.ok(preflight < installExit);
-  assert.ok(installExit < launch);
-  assert.match(
-    library.slice(installExit, launch),
-    /InstallScheduled \{\s*return Ok\(\(\)\);/,
-  );
+  assert.notEqual(launch, -1);
+  assert.ok(launch < update);
+  assert.ok(update < updateShutdown);
+  assert.match(library, /startup_update_task = Some\(tokio::spawn/);
+  assert.doesNotMatch(library, /startup_update::run\(&state, &ui\)/);
 });
 
 test("Windows startup update UI uses a dedicated message loop and custom task-dialog buttons", async () => {

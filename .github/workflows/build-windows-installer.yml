@@ -1,0 +1,147 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_BUILD_DIR: target
+  RUSTFLAGS: -D warnings
+
+jobs:
+  windows:
+    name: Windows x64 installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Codey
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "11.5.2"
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          $maxAttempts = 3
+          $installExitCode = 1
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            choco install nsis --yes --no-progress
+            $installExitCode = $LASTEXITCODE
+            if ($installExitCode -eq 0) {
+              break
+            }
+
+            if ($attempt -lt $maxAttempts) {
+              $delaySeconds = 15 * $attempt
+              Write-Warning "Chocolatey failed to install NSIS (attempt $attempt/$maxAttempts, exit code $installExitCode). Retrying in $delaySeconds seconds."
+              Start-Sleep -Seconds $delaySeconds
+            }
+          }
+          if ($installExitCode -ne 0) {
+            throw "Chocolatey failed to install NSIS after $maxAttempts attempts (exit code $installExitCode)."
+          }
+
+          $makensis = @(
+            "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+            "${env:ProgramFiles}\NSIS\makensis.exe",
+            "${env:ProgramFiles(x86)}\NSIS\Bin\makensis.exe",
+            "${env:ProgramFiles}\NSIS\Bin\makensis.exe"
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $makensis) {
+            $command = Get-Command makensis -ErrorAction SilentlyContinue
+            if ($command) {
+              $makensis = $command.Source
+            }
+          }
+          if (-not $makensis) {
+            throw "makensis.exe was not found after installing NSIS"
+          }
+          Split-Path $makensis | Out-File -FilePath $env:GITHUB_PATH -Append
+          "MAKENSIS=$makensis" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm run check
+
+      - name: JavaScript tests
+        run: pnpm run test:js
+
+      - name: Build Windows executable
+        env:
+          CODEY_UPDATE_BASE_URL: ${{ vars.CLOUDFLARE_R2_PUBLIC_BASE_URL }}
+        run: pnpm run build
+
+      - name: Package Windows installer
+        id: package
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $version = $env:GITHUB_REF_NAME.TrimStart("v", "V")
+          } else {
+            $version = "$version-$env:GITHUB_RUN_NUMBER"
+          }
+          $version = $version -replace '[\\/]', '-'
+
+          New-Item -ItemType Directory -Force "dist\windows" | Out-Null
+          $makensis = $env:MAKENSIS
+          if (-not $makensis -or -not (Test-Path $makensis)) {
+            $command = Get-Command makensis -ErrorAction SilentlyContinue
+            if ($command) {
+              $makensis = $command.Source
+            }
+          }
+          if (-not $makensis) {
+            throw "makensis.exe was not found."
+          }
+
+          $installerScript = (Resolve-Path "scripts\installer\windows\Codey.nsi").Path
+          & $makensis "/INPUTCHARSET" "UTF8" "/DVERSION=$version" "/DPROJECT_ROOT=$env:GITHUB_WORKSPACE" $installerScript
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $installer = "dist\windows\Codey-$version-windows-x64-setup.exe"
+          if (-not (Test-Path $installer)) {
+            throw "NSIS installer was not created: $installer"
+          }
+          "installer=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: codey-windows-x64-installer-${{ github.run_number }}
+          path: ${{ steps.package.outputs.installer }}
+          if-no-files-found: error
+          retention-days: 30

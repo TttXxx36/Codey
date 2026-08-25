@@ -44,3 +44,18 @@ test("Windows startup patch failure cleans the paused process before compatible 
   assert.match(cleanup, /terminate_windows_codex_processes\(app_dir, process_id\)\.await/);
   assert.match(cleanup, /-> Result<\(\)>/);
 });
+
+test("paused startup patch has one bounded inspector budget", async () => {
+  const source = await readFile(
+    new URL("../backend/src/codex_startup_patch.rs", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /const STARTUP_PATCH_TIMEOUT: Duration = Duration::from_secs\(8\)/);
+  assert.match(source, /wait_for_inspector\(port, deadline\)\.await/);
+  assert.match(
+    source,
+    /tokio::time::timeout_at\(\s*deadline,\s*install_over_websocket/,
+  );
+  assert.doesNotMatch(source, /Duration::from_secs\(15\)/);
+});

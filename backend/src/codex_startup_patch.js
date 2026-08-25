@@ -2923,13 +2923,42 @@
     },
   );
 
+  const recordRecoverableMainBundlePatchFailure = (error, filename) => {
+    const message = error instanceof Error ? error.message : String(error);
+    const failure = { name: "startupLifecycle", message };
+    const failureIndex = optionalMainBundlePatchFailures.findIndex(
+      (entry) => entry.name === failure.name,
+    );
+    if (failureIndex >= 0) {
+      optionalMainBundlePatchFailures[failureIndex] = failure;
+    } else {
+      optionalMainBundlePatchFailures.push(failure);
+    }
+    mainBundleSourcePatched = false;
+    globalThis.__CODEY_TEMP_WEBVIEW_SOURCE_PATCHED__ = false;
+    globalThis.__CODEY_EXECUTION_REAPER_SOURCE_PATCHED__ = false;
+    globalThis.__CODEY_EXTERNAL_PLUGIN_FOCUS_RECONCILE_SOURCE_PATCHED__ = false;
+    globalThis.__CODEY_DESKTOP_ANALYTICS_SOURCE_PATCHED__ = false;
+    globalThis.__CODEY_APP_STATE_HEARTBEAT_SOURCE_PATCHED__ = false;
+    // A changed Codex bundle must not add another synchronous child-process
+    // wait to the startup fallback.
+    recordCodeyPatchFailure(
+      "optional_main_bundle_patch:startupLifecycle",
+      error,
+      { filename },
+    );
+    try {
+      console.warn("[Codey] skipped incompatible main-bundle patch", error);
+    } catch {}
+  };
+
   // Install the main-bundle lifecycle and telemetry patches before V8 compiles
   // the monolithic bundle. Slim-pet mode skips only the eager hidden overlay
   // prewarm; the manager and native composition bridge stay available for
   // explicit voice use.
   {
     const originalJsExtension = Module._extensions[".js"];
-    Module._extensions[".js"] = function codeyMainBundleCompileHook(module, filename) {
+    const codeyMainBundleCompileHook = function(module, filename) {
       const isCodexBuildScript =
         /[\\/]\.vite[\\/]build[\\/][^\\/]+\.(?:cjs|js)$/i.test(filename);
       if (!isCodexBuildScript) {
@@ -2938,6 +2967,7 @@
 
       const fs = process.getBuiltinModule("fs");
       let source = fs.readFileSync(filename, "utf8");
+      const originalSource = source;
       const hasMainBundleName =
         /[\\/]\.vite[\\/]build[\\/]main(?:[-.][^\\/]*)?\.(?:cjs|js)$/i.test(filename);
       const hasMainBundleSignature =
@@ -3059,12 +3089,23 @@
       globalThis.__CODEY_APP_STATE_HEARTBEAT_SOURCE_PATCHED__ =
         !hasOptionalMainBundlePatchFailure("appStateHeartbeat");
       mainBundleSourcePatched = true;
-      module._compile(source, filename);
       } catch (error) {
-        recordCodeyPatchFailure("patch_codex_main_bundle", error, { filename });
-        throw error;
+        source = originalSource;
+        recordRecoverableMainBundlePatchFailure(error, filename);
+      }
+      if (Module._extensions[".js"] === codeyMainBundleCompileHook) {
+        Module._extensions[".js"] = originalJsExtension;
+      }
+      try {
+        module._compile(source, filename);
+      } catch (error) {
+        if (source === originalSource || error?.name !== "SyntaxError") throw error;
+        source = originalSource;
+        recordRecoverableMainBundlePatchFailure(error, filename);
+        module._compile(source, filename);
       }
     };
+    Module._extensions[".js"] = codeyMainBundleCompileHook;
   }
 
   const microStub = {

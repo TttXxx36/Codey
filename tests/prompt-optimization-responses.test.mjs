@@ -6,10 +6,6 @@ const cardSource = readFileSync(
   new URL("../src/PromptOptimizationCard.tsx", import.meta.url),
   "utf8",
 );
-const mantineWrapperSource = readFileSync(
-  new URL("../src/components/mantine/index.tsx", import.meta.url),
-  "utf8",
-);
 const backendSource = readFileSync(
   new URL("../backend/src/prompt_optimization.rs", import.meta.url),
   "utf8",
@@ -22,15 +18,14 @@ test("prompt optimization exposes no upstream protocol selector", () => {
   assert.doesNotMatch(cardSource, /Chat Completions/);
 });
 
-test("prompt optimization refreshes the creatable model picker without remounting", () => {
-  assert.doesNotMatch(cardSource, /modelSelectKey/);
+test("prompt optimization refreshes the creatable model picker after fetching", () => {
   assert.match(
     cardSource,
-    /<Select[\s\S]*?optionList=\{modelSelectOptions\}[\s\S]*?allowCreate/,
+    /const modelSelectKey = useMemo\(\s*\(\) => JSON\.stringify\(cloudModels\)/,
   );
   assert.match(
-    mantineWrapperSource,
-    /React\.useEffect\(\(\) => \{\s*setSearch\(selectedValue\);\s*\}, \[selectedValue\]\)/,
+    cardSource,
+    /<Select\s+key=\{modelSelectKey\}[\s\S]*?optionList=\{modelSelectOptions\}[\s\S]*?allowCreate/,
   );
   assert.match(
     cardSource,
@@ -38,9 +33,8 @@ test("prompt optimization refreshes the creatable model picker without remountin
   );
   assert.match(
     cardSource,
-    /focused \? "bg-blue-500\/8" : ""/,
+    /prompt-optimization-model-create-option\$\{focused \? " focused" : ""\}/,
   );
-  assert.doesNotMatch(cardSource, /prompt-optimization-model-create-option/);
 });
 
 test("prompt optimization uses Responses without runtime converters", () => {

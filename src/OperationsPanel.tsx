@@ -21,8 +21,7 @@ import type {
   PluginMarketplaceStatus,
   RuntimeStatus,
 } from "./App.types";
-import { Badge, Button, Card, Collapse } from "./components/mantine";
-import { flushCardClass } from "./uiClasses";
+import { Badge, Button, Card } from "./components/semi";
 import {
   buildEnabledOptimizationFeatures,
   summarizeInjectionScripts,
@@ -95,18 +94,9 @@ function OperationsPanelComponent({
 }: OperationsPanelProps) {
   const operationsHubRef = useRef<HTMLElement>(null);
   const [activeCardTitle, setActiveCardTitle] = useState<string | null>(null);
-  const [expandedCardTitle, setExpandedCardTitle] = useState<string | null>(
-    null,
-  );
 
   const toggleCard = (title: string) => {
-    if (activeCardTitle === title) {
-      setActiveCardTitle(null);
-      return;
-    }
-
-    setActiveCardTitle(title);
-    setExpandedCardTitle(title);
+    setActiveCardTitle((prev) => (prev === title ? null : title));
   };
 
   const maintenance = status.maintenance;
@@ -170,12 +160,6 @@ function OperationsPanelComponent({
   const codexVersionLabel = codexVersion
     ? `Codex v${codexVersion}`
     : "Codex 版本未知";
-
-  const handleCollapseTransitionEnd = () => {
-    if (!activeCardTitle) {
-      setExpandedCardTitle(null);
-    }
-  };
 
   type MetricItem = {
     id: string;
@@ -370,10 +354,6 @@ function OperationsPanelComponent({
       },
     },
   ];
-  const expandedStatusCard = expandedCardTitle
-    ? statusCards.find((item) => item.title === expandedCardTitle) ?? null
-    : null;
-  const ExpandedStatusIcon = expandedStatusCard?.icon;
 
   return (
     <section
@@ -381,7 +361,7 @@ function OperationsPanelComponent({
       className={`operations-hub${restartPending ? " pending" : status.running ? " running" : ""}`}
       aria-labelledby="operations-title"
     >
-      <Card className={`operations-panel ${flushCardClass}`}>
+      <Card className="operations-panel">
         <div className="operations-header">
           <div className="operations-heading">
             <span className="operations-heading-icon">
@@ -464,7 +444,7 @@ function OperationsPanelComponent({
                 onClick={onRestart}
               >
                 {busy === "restart" || status.restartInProgress ? (
-                  <LoaderCircle className="animate-spin" aria-hidden="true" />
+                  <LoaderCircle className="spinner" aria-hidden="true" />
                 ) : (
                   <RefreshCw aria-hidden="true" />
                 )}
@@ -474,154 +454,149 @@ function OperationsPanelComponent({
           </div>
         </div>
 
-        <Collapse
-          animateOpacity
-          className="operations-expanded-collapse"
-          expanded={Boolean(activeCardTitle)}
-          keepMounted
-          onTransitionEnd={handleCollapseTransitionEnd}
-          transitionDuration={180}
-        >
-          {expandedStatusCard && ExpandedStatusIcon && (
-            <div
-              className="operations-expanded-grid"
-              role="region"
-              aria-label="展开的系统详情"
-            >
-              <article
-                key={expandedStatusCard.title}
-                className={`operations-expanded-card tone-${expandedStatusCard.tone}`}
-              >
-                <div className="expanded-card-header">
-                  <div className="expanded-card-title">
-                    <span
-                      className={`expanded-card-icon tone-${expandedStatusCard.tone}`}
-                    >
-                      <ExpandedStatusIcon size={18} aria-hidden="true" />
-                    </span>
-                    <div className="expanded-card-copy">
-                      <div className="expanded-card-heading">
-                        <h3>{expandedStatusCard.title}</h3>
-                        {expandedStatusCard.enabledFeatureCount !==
-                          undefined && (
-                          <span className="expanded-card-feature-count">
-                            已启用 {expandedStatusCard.enabledFeatureCount} 项
-                          </span>
-                        )}
-                      </div>
-                      <p>{expandedStatusCard.description}</p>
-                    </div>
-                  </div>
-                  <div className="expanded-card-actions">
-                    <Badge variant={expandedStatusCard.tone}>
-                      {expandedStatusCard.label}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="expanded-card-body">
-                  {expandedStatusCard.metrics.length > 0 && (
-                    <div className="expanded-card-metrics">
-                      {expandedStatusCard.metrics.map((metric) => {
-                        const MetricIcon = metric.icon;
-                        return (
-                          <div
-                            key={metric.id}
-                            className="expanded-metric-item"
-                          >
-                            <span
-                              className={`expanded-metric-icon tone-${metric.tone || "info"}`}
-                            >
-                              <MetricIcon size={14} aria-hidden="true" />
-                            </span>
-                            <span className="expanded-metric-text">
-                              {metric.tooltip}
-                            </span>
+        {activeCardTitle && (
+          <div
+            className="operations-expanded-grid"
+            role="region"
+            aria-label="展开的系统详情"
+          >
+            {statusCards
+              .filter((item) => item.title === activeCardTitle)
+              .map((item) => {
+                const StatusIcon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className={`operations-expanded-card tone-${item.tone}`}
+                  >
+                    <div className="expanded-card-header">
+                      <div className="expanded-card-title">
+                        <span
+                          className={`expanded-card-icon tone-${item.tone}`}
+                        >
+                          <StatusIcon size={18} aria-hidden="true" />
+                        </span>
+                        <div className="expanded-card-copy">
+                          <div className="expanded-card-heading">
+                            <h3>{item.title}</h3>
+                            {item.enabledFeatureCount !== undefined && (
+                              <span className="expanded-card-feature-count">
+                                已启用 {item.enabledFeatureCount} 项
+                              </span>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {expandedStatusCard.showInjectionScripts && (
-                    <section
-                      className="injection-status-section"
-                      aria-labelledby="injection-status-title"
-                    >
-                      <div className="injection-status-header">
-                        <h4 id="injection-status-title">已生效功能</h4>
+                          <p>{item.description}</p>
+                        </div>
                       </div>
+                      <div className="expanded-card-actions">
+                        <Badge variant={item.tone}>{item.label}</Badge>
+                      </div>
+                    </div>
 
-                      {enabledOptimizationFeatures.length > 0 ? (
-                        <div className="injection-status-list" role="list">
-                          {enabledOptimizationFeatures.map((feature) => {
-                            const FeatureIcon = feature.icon;
+                    <div className="expanded-card-body">
+                      {item.metrics.length > 0 && (
+                        <div className="expanded-card-metrics">
+                          {item.metrics.map((metric) => {
+                            const MetricIcon = metric.icon;
                             return (
                               <div
-                                key={feature.id}
-                                className="injection-status-row"
-                                role="listitem"
+                                key={metric.id}
+                                className="expanded-metric-item"
                               >
                                 <span
-                                  className="injection-script-icon"
-                                  aria-hidden="true"
+                                  className={`expanded-metric-icon tone-${metric.tone || "info"}`}
                                 >
-                                  <FeatureIcon size={15} />
+                                  <MetricIcon size={14} aria-hidden="true" />
                                 </span>
-                                <div className="injection-script-copy">
-                                  <div className="injection-script-title">
-                                    <span>{feature.name}</span>
-                                    <span className="injection-script-source">
-                                      {feature.sourceLabel}
-                                    </span>
-                                  </div>
-                                  {feature.detail && (
-                                    <span className="injection-script-detail">
-                                      {feature.detail}
-                                    </span>
-                                  )}
-                                </div>
+                                <span className="expanded-metric-text">
+                                  {metric.tooltip}
+                                </span>
                               </div>
                             );
                           })}
                         </div>
-                      ) : (
-                        <div className="injection-status-empty">
-                          {status.running
-                            ? injectionScripts.length > 0
-                              ? "暂未检测到已生效功能"
-                              : "正在读取已生效功能"
-                            : "Codex 启动后将在这里显示已生效功能"}
+                      )}
+
+                      {item.showInjectionScripts && (
+                        <section
+                          className="injection-status-section"
+                          aria-labelledby="injection-status-title"
+                        >
+                          <div className="injection-status-header">
+                            <h4 id="injection-status-title">已生效功能</h4>
+                          </div>
+
+                          {enabledOptimizationFeatures.length > 0 ? (
+                            <div className="injection-status-list" role="list">
+                              {enabledOptimizationFeatures.map((feature) => {
+                                const FeatureIcon = feature.icon;
+                                return (
+                                  <div
+                                    key={feature.id}
+                                    className="injection-status-row"
+                                    role="listitem"
+                                  >
+                                    <span
+                                      className="injection-script-icon"
+                                      aria-hidden="true"
+                                    >
+                                      <FeatureIcon size={15} />
+                                    </span>
+                                    <div className="injection-script-copy">
+                                      <div className="injection-script-title">
+                                        <span>{feature.name}</span>
+                                        <span className="injection-script-source">
+                                          {feature.sourceLabel}
+                                        </span>
+                                      </div>
+                                      {feature.detail && (
+                                        <span className="injection-script-detail">
+                                          {feature.detail}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="injection-status-empty">
+                              {status.running
+                                ? injectionScripts.length > 0
+                                  ? "暂未检测到已生效功能"
+                                  : "正在读取已生效功能"
+                                : "Codex 启动后将在这里显示已生效功能"}
+                            </div>
+                          )}
+                        </section>
+                      )}
+
+                      {item.action && (
+                        <div className="expanded-card-footer">
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            disabled={item.action.disabled}
+                            onClick={item.action.onClick}
+                          >
+                            {item.action.loading ? (
+                              <LoaderCircle
+                                className="spinner"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <RefreshCw aria-hidden="true" />
+                            )}
+                            {item.action.label}
+                          </Button>
                         </div>
                       )}
-                    </section>
-                  )}
-
-                  {expandedStatusCard.action && (
-                    <div className="expanded-card-footer">
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        disabled={expandedStatusCard.action.disabled}
-                        onClick={expandedStatusCard.action.onClick}
-                      >
-                        {expandedStatusCard.action.loading ? (
-                          <LoaderCircle
-                            className="animate-spin"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <RefreshCw aria-hidden="true" />
-                        )}
-                        {expandedStatusCard.action.label}
-                      </Button>
                     </div>
-                  )}
-                </div>
-              </article>
-            </div>
-          )}
-        </Collapse>
+                  </article>
+                );
+              })}
+          </div>
+        )}
 
       </Card>
     </section>

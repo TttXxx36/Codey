@@ -1,8 +1,15 @@
 #![cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
 
+use std::time::Duration;
+
 use anyhow::Result;
 
 const PATCH_RESULT: &str = "codey-startup-patch-installed-v31";
+// `--inspect-brk` deliberately pauses the Codex main process. Keep the whole
+// hand-off bounded so an unavailable inspector can fall back to a normal
+// launch instead of leaving Codex parked on its opening window.
+const STARTUP_PATCH_TIMEOUT: Duration = Duration::from_secs(8);
+const INSPECTOR_REQUEST_TIMEOUT: Duration = Duration::from_millis(750);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PatchOptions {
@@ -72,10 +79,11 @@ pub async fn install(
     options: PatchOptions,
     runtime_config_overrides: &[String],
 ) -> Result<()> {
-    let websocket_url = wait_for_inspector(port).await?;
+    let deadline = tokio::time::Instant::now() + STARTUP_PATCH_TIMEOUT;
+    let websocket_url = wait_for_inspector(port, deadline).await?;
     let expression = patch_expression_with_runtime_overrides(options, runtime_config_overrides);
-    tokio::time::timeout(
-        std::time::Duration::from_secs(10),
+    tokio::time::timeout_at(
+        deadline,
         install_over_websocket(&websocket_url, &expression),
     )
     .await
@@ -83,21 +91,24 @@ pub async fn install(
     Ok(())
 }
 
-async fn wait_for_inspector(port: u16) -> Result<String> {
+async fn wait_for_inspector(port: u16, deadline: tokio::time::Instant) -> Result<String> {
     let client = reqwest::Client::builder()
         .no_proxy()
-        .timeout(std::time::Duration::from_millis(750))
+        .timeout(INSPECTOR_REQUEST_TIMEOUT)
         .build()?;
     let endpoint = format!("http://127.0.0.1:{port}/json/list");
-    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(15);
     let mut last_error = "调试端口尚未响应".to_string();
-    let mut retry_delay = std::time::Duration::from_millis(20);
+    let mut retry_delay = Duration::from_millis(20);
 
     while tokio::time::Instant::now() < deadline {
-        match client.get(&endpoint).send().await {
-            Ok(response) if response.status().is_success() => {
-                match response.json::<Vec<serde_json::Value>>().await {
-                    Ok(targets) => {
+        match tokio::time::timeout_at(deadline, client.get(&endpoint).send()).await {
+            Err(_) => break,
+            Ok(Ok(response)) if response.status().is_success() => {
+                match tokio::time::timeout_at(deadline, response.json::<Vec<serde_json::Value>>())
+                    .await
+                {
+                    Err(_) => break,
+                    Ok(Ok(targets)) => {
                         if let Some(url) = targets.iter().find_map(|target| {
                             target
                                 .get("webSocketDebuggerUrl")
@@ -107,16 +118,22 @@ async fn wait_for_inspector(port: u16) -> Result<String> {
                         }
                         last_error = "调试端口没有可连接的目标".to_string();
                     }
-                    Err(error) => last_error = error.to_string(),
+                    Ok(Err(error)) => last_error = error.to_string(),
                 }
             }
-            Ok(response) => last_error = format!("调试端口返回 HTTP {}", response.status()),
-            Err(error) => last_error = error.to_string(),
+            Ok(Ok(response)) => {
+                last_error = format!("调试端口返回 HTTP {}", response.status())
+            }
+            Ok(Err(error)) => last_error = error.to_string(),
         }
-        tokio::time::sleep(retry_delay).await;
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        tokio::time::sleep(retry_delay.min(remaining)).await;
         retry_delay = std::cmp::min(
             retry_delay.saturating_mul(2),
-            std::time::Duration::from_millis(100),
+            Duration::from_millis(100),
         );
     }
 
@@ -257,6 +274,12 @@ mod tests {
     #[test]
     fn inspector_is_loopback_only_and_pauses_before_startup() {
         assert_eq!(inspector_argument(19321), "--inspect-brk=127.0.0.1:19321");
+    }
+
+    #[test]
+    fn startup_patch_budget_covers_inspector_discovery_and_installation() {
+        assert_eq!(STARTUP_PATCH_TIMEOUT, Duration::from_secs(8));
+        assert!(INSPECTOR_REQUEST_TIMEOUT < STARTUP_PATCH_TIMEOUT);
     }
 
     #[test]
