@@ -36,6 +36,12 @@ jobs:
       - name: Regenerate lockfile
         run: pnpm install --no-frozen-lockfile
 
+      - name: Print regenerated lockfile for handoff
+        run: |
+          echo 'CODEY_LOCKFILE_BEGIN'
+          cat pnpm-lock.yaml
+          echo 'CODEY_LOCKFILE_END'
+
       - name: Upload generated lockfile
         uses: actions/upload-artifact@v4
         with:
