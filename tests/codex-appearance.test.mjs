@@ -6,10 +6,6 @@ const appearanceSource = readFileSync(
   new URL("../public/codex-appearance.js", import.meta.url),
   "utf8",
 );
-const legacySource = readFileSync(
-  new URL("../../codex-customizer.js", import.meta.url),
-  "utf8",
-);
 
 test("Codex appearance keeps the image inside the conversation surface", () => {
   assert.match(appearanceSource, /__CODEY_CODEX_APPEARANCE_SETTINGS__/);
@@ -35,8 +31,8 @@ test("Codex appearance supports persistent hot-apply and safe capability fallbac
   assert.match(appearanceSource, /window\.removeEventListener/);
 });
 
-test("legacy customizer yields to Codey's built-in background owner", () => {
-  assert.match(legacySource, /window\.__codeyCodexAppearance\?\.builtIn === true/);
-  assert.match(legacySource, /disabledByCodey: true/);
-  assert.match(legacySource, /window\.__codexCustomizer = null/);
+test("built-in controller removes the legacy customizer safely", () => {
+  assert.match(appearanceSource, /removeLegacyCustomizer/);
+  assert.match(appearanceSource, /LEGACY_IDS/);
+  assert.match(appearanceSource, /window\.__codexCustomizer = null/);
 });
