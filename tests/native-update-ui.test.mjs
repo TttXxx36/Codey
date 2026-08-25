@@ -4,27 +4,22 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("startup update preflight completes before the first Codex launch", async () => {
+test("startup update runs after the first Codex launch", async () => {
   const library = await readFile(
     new URL("backend/src/lib.rs", root),
     "utf8",
   );
-  const preflight = library.indexOf("startup_update::run(&state, &ui)");
-  const installExit = library.indexOf(
-    "StartupUpdateOutcome::InstallScheduled",
-    preflight,
-  );
-  const launch = library.indexOf(
-    "commands::launch_codey_runtime(&state).await",
-    preflight,
-  );
+  const launch = library.indexOf("commands::launch_codey_runtime(&state).await");
+  const background = library.indexOf("startup_update::run(&update_state, &update_ui)");
+  const shutdownRequest = library.indexOf("update_state.request_update_shutdown()", background);
 
-  assert.notEqual(preflight, -1);
-  assert.ok(preflight < installExit);
-  assert.ok(installExit < launch);
+  assert.notEqual(launch, -1);
+  assert.notEqual(background, -1);
+  assert.ok(launch < background);
+  assert.ok(shutdownRequest > background);
   assert.match(
-    library.slice(installExit, launch),
-    /InstallScheduled \{\s*return Ok\(\(\)\);/,
+    library.slice(background - 200, shutdownRequest + 80),
+    /tokio::spawn\(async move/
   );
 });
 
