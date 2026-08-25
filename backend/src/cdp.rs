@@ -199,6 +199,7 @@ impl InjectedTarget {
     }
 }
 
+#[allow(dead_code)]
 pub fn prepare_injection_scripts(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
@@ -227,6 +228,7 @@ pub fn prepare_injection_scripts_with_appearance(
     )
 }
 
+#[allow(dead_code)]
 fn prepare_injection_scripts_for_platform(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
