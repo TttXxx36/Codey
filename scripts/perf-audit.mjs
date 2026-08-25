@@ -35,7 +35,7 @@ const sourceFiles = [
       documentQueries: /document\.querySelectorAll/g,
       timers: /setTimeout|setInterval/g,
       boundedThreadRows: /maxTrackedThreadRows/g,
-      detachedRowCleanup: /untrackThreadRowsInSubtree/g,
+      detachedRowCleanup: /untrackThreadRowsInSubtree/g,\n      stableTrackedRowIteration: /\\[\\.\\.\\.threadUpdatedAtRows\\]\\.forEach/g,
     },
   },
   {
@@ -176,6 +176,13 @@ const report = {
       reproduction: "Start Codey with CODEY_PERF_TRACE=1 and compare launch_codey_inner.* to runtime_start.* events.",
       impact: "Independent app-path, route, provider, script preparation, storage and router work previously waited in sequence.",
       remediation: "Run independent read-only preparation and local router startup concurrently; preserve storage repair ordering before Codex spawn.",
+    },
+    {
+      id: "tracked-row-iteration-freeze",
+      priority: "high",
+      reproduction: "Open a sidebar row with timestamp metadata and trigger a timestamp refresh or session switch.",
+      impact: "Re-adding the current row during Set iteration can make the renderer loop forever, freezing left-sidebar session clicks.",
+      remediation: "Iterate a snapshot of the bounded row set before callbacks are allowed to update LRU order.",
     },
     {
       id: "session-row-retention",
