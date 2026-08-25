@@ -1033,7 +1033,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     ));
     await waitForVerifier(() => sharedConcurrency.maxInFlight === 2 && sharedConcurrency.inFlight === 0);
     assert.equal(
-        sharedConcurrency.maxInFlight,
+      sharedConcurrency.maxInFlight,
       2,
       "all mounted loaders must share the same native request limit",
     );
