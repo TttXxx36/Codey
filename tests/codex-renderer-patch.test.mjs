@@ -402,7 +402,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     );
     assert.match(patchedHistoricalSubagentSource, /entries\.size>=256/);
     assert.match(patchedHistoricalSubagentSource, /activeRequests<2/);
-    assert.match(patchedHistoricalSubagentSource, /requestTimeoutMs:1500/);
+    assert.match(patchedHistoricalSubagentSource, /version:6,requestTimeoutMs:1500/);
     assert.match(patchedHistoricalSubagentSource, /thread status request timed out/);
     assert.match(patchedHistoricalSubagentSource, /scheduleVerify/);
     assert.doesNotMatch(
@@ -560,7 +560,8 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
       }
     };
 
-    // Reproduce the actual failure: the state-DB list itself contains no active    // row, but native reconcile appends a cached active descendant. A verifier
+    // Reproduce the actual failure: the state-DB list itself contains no active
+    // row, but native reconcile appends a cached active descendant. A verifier
     // placed before reconcile sees zero candidates while the final UI projection
     // remains active through the native summary.
     const baselineStore = createHistoricalStore({
@@ -677,7 +678,7 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     assert.deepEqual(
       globalThis.__CODEY_SUBAGENT_HISTORICAL_ACTIVE_VERIFIER_V5__.snapshot(),
       {
-        version: 5,
+        version: 6,
         scans: 1,
         inspected: 8,
         candidates: 8,
@@ -730,7 +731,8 @@ test("an incompatible optional renderer patch never blocks the Codex module resp
     );
     const secondCappedSnapshot = await cappedTopology.discover("parent-cap");
     await waitForVerifier(() => cappedClient.requests.length === 9);
-    assert.equal(cappedClient.requests.length, 9);    assert.equal(
+    assert.equal(cappedClient.requests.length, 9);
+    assert.equal(
       secondCappedSnapshot.descendantThreads.every(({ status }) =>
         status.type === "idle"
       ),
