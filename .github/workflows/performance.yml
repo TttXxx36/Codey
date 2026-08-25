@@ -1,0 +1,66 @@
+name: Performance audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Source, build, and regression audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codey history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "11.5.2"
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Select comparison baseline
+        shell: bash
+        run: |
+          baseline="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$baseline" ] || [ "$baseline" = "0000000000000000000000000000000000000000" ]; then
+            baseline="HEAD^"
+          fi
+          echo "CODEY_PERF_BASELINE_REF=$baseline" >> "$GITHUB_ENV"
+
+      - name: JavaScript regression tests
+        run: pnpm run test:js
+
+      - name: Build injection overlay
+        run: pnpm run vite:build
+
+      - name: Generate performance report
+        run: pnpm run perf:audit
+
+      - name: Upload performance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: codey-performance-audit-${{ github.sha }}
+          path: artifacts/performance/
+          if-no-files-found: error
