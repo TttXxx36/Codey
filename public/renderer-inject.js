@@ -11,6 +11,7 @@
   const backendStatusPath = "/backend/status";
   const backendHealthPath = "/backend/health";
   const accountUsagePath = "/account/usage";
+  const initialAccountUsageLayout = __CODEY_ACCOUNT_USAGE_LAYOUT__;
   const buttonId = "codey-settings-button";
   const accountUsageId = "codey-account-usage";
   const styleId = "codey-core-injected-style";
@@ -50,10 +51,37 @@
   let runtimeHealthState = "checking";
   let runtimeHealthMessage = "";
   let runtimeHealthObservedAt = 0;
+  const accountUsageLayoutDefault = Object.freeze({
+    mode: "fixed",
+    anchorX: 0,
+    anchorY: 10000,
+  });
+  const clampAccountUsageAnchor = (value, fallback) => {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? Math.max(0, Math.min(10000, Math.round(number)))
+      : fallback;
+  };
+  const normalizeAccountUsageLayout = (value) => ({
+    mode: value?.mode === "free" ? "free" : "fixed",
+    anchorX: clampAccountUsageAnchor(
+      value?.anchorX ?? value?.anchor_x,
+      accountUsageLayoutDefault.anchorX,
+    ),
+    anchorY: clampAccountUsageAnchor(
+      value?.anchorY ?? value?.anchor_y,
+      accountUsageLayoutDefault.anchorY,
+    ),
+  });
+
   let accountUsageTimer = 0;
   let accountUsageCheckInFlight = false;
   let accountUsagePollingEnabled = true;
   let accountUsageLastResult = null;
+  let accountUsageLayout = normalizeAccountUsageLayout(initialAccountUsageLayout);
+  let accountUsagePendingLayout = null;
+  let accountUsageLayoutSavePromise = null;
+  let accountUsageDragState = null;
   let sessionToolsInteractionArmed = false;
   let bootstrapObserver = null;
   let headerMountDirty = true;
@@ -101,14 +129,20 @@
       #${buttonId}[data-codey-header-actions="true"]::after { top: 4px; right: 4px; }
       #${buttonId}[data-codey-runtime-state="unavailable"][data-codey-update-available="true"]::after { top: auto; right: 3px; bottom: 3px; width: 5px; height: 5px; }
       #${accountUsageId} { -webkit-app-region: no-drag !important; position: relative; display: block; box-sizing: border-box; width: 100%; min-width: 0; padding: 7px 16px 8px; background: transparent; color: CanvasText; container-type: inline-size; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif; line-height: 1.15; pointer-events: auto !important; transition: opacity .16s ease; user-select: none; }
+      #${accountUsageId}[data-layout-mode="free"] { position: fixed; z-index: 2147483638; width: min(248px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 10px 12px 11px; border: 1px solid color-mix(in srgb, CanvasText 14%, transparent); border-radius: 12px; background: color-mix(in srgb, Canvas 78%, transparent); box-shadow: 0 12px 28px rgb(0 0 0 / .24); backdrop-filter: blur(14px); }
       #${accountUsageId}[data-state="stale"] { opacity: .58; }
       #${accountUsageId}[data-state="error"] { padding-block: 8px; color: color-mix(in srgb, CanvasText 58%, transparent); font-size: 10px; }
-      #${accountUsageId} .codey-usage-list { display: grid; min-width: 0; grid-template-columns: repeat(var(--codey-usage-window-count), minmax(0, 1fr)); gap: 12px; }
-      #${accountUsageId} .codey-usage-segment { min-width: 0; }
-      #${accountUsageId}[data-window-count="2"] .codey-usage-segment + .codey-usage-segment { border-inline-start: 1px solid color-mix(in srgb, CanvasText 9%, transparent); padding-inline-start: 12px; }
+      #${accountUsageId} .codey-usage-header { display: flex; min-width: 0; align-items: center; gap: 8px; padding-bottom: 7px; }
+      #${accountUsageId} .codey-usage-plan-tag { flex: 0 0 auto; overflow: hidden; max-width: 48%; border: 1px solid color-mix(in srgb, #0a84ff 32%, transparent); border-radius: 4px; padding: 0 4px; background: color-mix(in srgb, #0a84ff 13%, transparent); color: color-mix(in srgb, #0a84ff 82%, CanvasText); font-size: 8px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+      #${accountUsageId} .codey-usage-plan-caption { min-width: 0; overflow: hidden; color: color-mix(in srgb, CanvasText 52%, transparent); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+      #${accountUsageId} .codey-usage-drag-handle { display: none; min-width: 0; margin-inline-start: auto; border: 0; padding: 0; background: transparent; color: color-mix(in srgb, CanvasText 58%, transparent); font: inherit; font-size: 9px; cursor: grab; }
+      #${accountUsageId}[data-layout-mode="free"] .codey-usage-drag-handle { display: inline-flex; align-items: center; gap: 5px; }
+      #${accountUsageId}[data-layout-mode="free"][data-dragging="true"] .codey-usage-drag-handle { cursor: grabbing; }
+      #${accountUsageId} .codey-usage-list { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 7px; }
+      #${accountUsageId} .codey-usage-segment { min-width: 0; padding-block-start: 7px; border-block-start: 1px solid color-mix(in srgb, CanvasText 9%, transparent); }
+      #${accountUsageId} .codey-usage-segment:first-child { padding-block-start: 0; border-block-start: 0; }
       #${accountUsageId} .codey-usage-overview { display: flex; min-width: 0; align-items: baseline; gap: 6px; }
       #${accountUsageId} .codey-usage-window-label { min-width: 0; overflow: hidden; color: color-mix(in srgb, CanvasText 58%, transparent); font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-      #${accountUsageId} .codey-usage-plan-tag { flex: 0 0 auto; overflow: hidden; max-width: 44%; border: 1px solid color-mix(in srgb, #0a84ff 32%, transparent); border-radius: 4px; padding: 0 4px; background: color-mix(in srgb, #0a84ff 13%, transparent); color: color-mix(in srgb, #0a84ff 82%, CanvasText); font-size: 8px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
       #${accountUsageId} .codey-usage-value { margin-inline-start: auto; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
       #${accountUsageId} .codey-usage-meter { display: block; box-sizing: border-box; width: 100%; height: 2px; min-height: 2px; max-height: 2px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, CanvasText 8%, transparent); contain: size; line-height: 0; }
       #${accountUsageId} .codey-usage-meter > span { display: block; box-sizing: border-box; width: 100%; height: 2px; min-height: 2px; max-height: 2px; border-radius: inherit; background: #0a84ff; transform: scaleX(var(--codey-usage-remaining)); transform-origin: left center; }
@@ -130,9 +164,9 @@
       #${accountUsageId} .codey-usage-detail-meta { margin-top: 3px; color: rgb(245 245 245 / .48); font-size: 9px; font-variant-numeric: tabular-nums; }
       #${accountUsageId} .codey-usage-detail-meta span:last-child { margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #${accountUsageId} .codey-usage-details-updated { padding-top: 7px; color: rgb(245 245 245 / .38); font-size: 9px; font-variant-numeric: tabular-nums; text-align: right; }
-      @container (max-width: 220px) {
-        #${accountUsageId} .codey-usage-list { grid-template-columns: minmax(0, 1fr); gap: 7px; }
-        #${accountUsageId}[data-window-count="2"] .codey-usage-segment + .codey-usage-segment { border-block-start: 1px solid color-mix(in srgb, CanvasText 9%, transparent); border-inline-start: 0; padding-block-start: 7px; padding-inline-start: 0; }
+      @container (max-width: 260px) {
+        #${accountUsageId} { padding-inline: 12px; }
+        #${accountUsageId} .codey-usage-plan-caption { display: none; }
       }
       @media (prefers-reduced-motion: reduce) {
         #${buttonId}, #${buttonId} *, #${accountUsageId}, #${accountUsageId} * { animation: none !important; transition: none !important; }
@@ -458,17 +492,21 @@
   const mountedAccountUsageIsUsable = (usage) => {
     if (!(usage instanceof HTMLElement) || usage.isConnected !== true) return false;
     const host = usage.parentElement;
-    return host instanceof HTMLElement
-      && host.getAttribute("data-codey-usage-host") === "true"
+    if (!(host instanceof HTMLElement)) return false;
+    if (accountUsageLayout.mode === "free") {
+      return host === document.body
+        && host.getAttribute("data-codey-usage-host") === "free";
+    }
+    return host.getAttribute("data-codey-usage-host") === "true"
       && usage.nextElementSibling === usage.__codeyUsageAnchor;
   };
 
-  const accountUsageWindowSegment = (window, kind, plan = "") => {
+  const accountUsageWindowSegment = (window, kind) => {
     if (!window || accountUsageWindowKind(window) !== kind) return null;
     const remaining = Math.max(0, Math.min(100, 100 - Number(window.usedPercent)));
     const roundedRemaining = Math.round(remaining);
-    const label = kind === "weekly" ? "周额度" : "5 小时";
-    const ariaLabel = kind === "weekly" ? "周额度" : "5 小时额度";
+    const label = accountUsageWindowLabel(window);
+    const ariaLabel = label;
     const reset = accountUsageResetLabel(window.resetsAt);
     const resetTime = accountUsageResetTimeLabel(window.resetsAt);
     const tone = roundedRemaining <= 20
@@ -483,7 +521,6 @@
       html: `
         <span class="codey-usage-segment" data-window="${kind}" data-tone="${tone}" style="--codey-usage-remaining:${remaining / 100}">
           <span class="codey-usage-overview">
-            ${plan ? `<span class="codey-usage-plan-tag">${escapeAccountUsageText(plan)}</span>` : ""}
             <span class="codey-usage-window-label">${label}</span>
             <span class="codey-usage-value">${roundedRemaining}%</span>
           </span>
@@ -500,16 +537,24 @@
       const kind = accountUsageWindowKind(window);
       if (kind && !windowsByKind.has(kind)) windowsByKind.set(kind, window);
     }
-    const visibleKinds = ["weekly", "five-hour"]
-      .filter((kind) => windowsByKind.has(kind));
-    const plan = accountUsagePlanLabel(result?.planType);
-    return visibleKinds.map((kind, index) => accountUsageWindowSegment(
-      windowsByKind.get(kind),
-      kind,
-      index === 0 ? plan : "",
-    ));
+    return ["five-hour", "weekly"]
+      .filter((kind) => windowsByKind.has(kind))
+      .map((kind) => accountUsageWindowSegment(windowsByKind.get(kind), kind));
   };
 
+  const accountUsageHeaderMarkup = (result) => {
+    const plan = accountUsagePlanLabel(result?.planType);
+    const dragHandle = accountUsageLayout.mode === "free"
+      ? '<button type="button" class="codey-usage-drag-handle" aria-label="拖动额度卡片"><span>拖动</span><span aria-hidden="true">⋮⋮</span></button>'
+      : "";
+    if (!plan && !dragHandle) return "";
+    return `
+      <div class="codey-usage-header">
+        ${plan ? `<span class="codey-usage-plan-tag">${escapeAccountUsageText(plan)}</span><span class="codey-usage-plan-caption">账户额度</span>` : ""}
+        ${dragHandle}
+      </div>
+    `;
+  };
   const accountUsageDetailWindow = (window) => {
     if (!window || !Number.isFinite(Number(window.usedPercent))) return "";
     const used = Math.max(0, Math.min(100, Number(window.usedPercent)));
@@ -561,9 +606,11 @@
   };
 
   const accountUsageDetailsMarkup = (result) => {
+    const windows = [result?.primary, result?.secondary];
     const rows = [
-      accountUsageDetailWindow(result?.primary),
-      accountUsageDetailWindow(result?.secondary),
+      ...["five-hour", "weekly"].map((kind) => accountUsageDetailWindow(
+        windows.find((window) => accountUsageWindowKind(window) === kind),
+      )),
       accountUsageCreditsDetail(result?.credits),
     ].filter(Boolean);
     const fetched = accountUsageFetchedLabel(result?.fetchedAt);
@@ -579,7 +626,221 @@
     `;
   };
 
+  const accountUsageElementRect = (element) => {
+    if (!(element instanceof HTMLElement) || typeof element.getBoundingClientRect !== "function") {
+      return null;
+    }
+    const rect = element.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return null;
+    const computed = typeof window.getComputedStyle === "function"
+      ? window.getComputedStyle(element)
+      : null;
+    return computed?.display === "none" || computed?.visibility === "hidden" ? null : rect;
+  };
+
+  const accountUsageViewportRect = () => {
+    const documentRect = document.documentElement?.getBoundingClientRect?.();
+    const viewportWidth = Math.max(
+      Number(window.innerWidth) || 0,
+      Number(document.documentElement?.clientWidth) || 0,
+      Number(documentRect?.width) || 0,
+      320,
+    );
+    const viewportHeight = Math.max(
+      Number(window.innerHeight) || 0,
+      Number(document.documentElement?.clientHeight) || 0,
+      Number(documentRect?.height) || 0,
+      240,
+    );
+    const contentSelectors = [".thread-scroll-container", "main", "[role=main]"];
+    const contentRect = contentSelectors
+      .flatMap((selector) => Array.from(document.querySelectorAll?.(selector) || []))
+      .map(accountUsageElementRect)
+      .find(Boolean);
+    let left = Math.max(12, Number(contentRect?.left) || 12);
+    let right = Math.min(viewportWidth - 12, Number(contentRect?.right) || viewportWidth - 12);
+    if (right - left < 180) {
+      left = 12;
+      right = viewportWidth - 12;
+    }
+    const composerRect = ["form", "textarea", "[contenteditable=true]"]
+      .flatMap((selector) => Array.from(document.querySelectorAll?.(selector) || []))
+      .map(accountUsageElementRect)
+      .filter((rect) => rect && rect.bottom >= viewportHeight - 96 && rect.width >= 280)
+      .sort((a, b) => a.top - b.top)[0] || null;
+    const top = Math.max(12, Number(contentRect?.top) || 12);
+    const bottomCandidate = composerRect
+      ? Number(composerRect.top) - 12
+      : viewportHeight - 12;
+    const bottom = Math.max(top + 120, Math.min(viewportHeight - 12, bottomCandidate));
+    return { left, right, top, bottom, width: right - left, height: bottom - top };
+  };
+
+  const applyAccountUsageLayout = (usage = document.getElementById(accountUsageId)) => {
+    if (!(usage instanceof HTMLElement)) return;
+    usage.setAttribute("data-layout-mode", accountUsageLayout.mode);
+    if (accountUsageLayout.mode !== "free") {
+      usage.style.removeProperty?.("left");
+      usage.style.removeProperty?.("top");
+      usage.style.removeProperty?.("right");
+      usage.style.removeProperty?.("bottom");
+      usage.style.removeProperty?.("position");
+      usage.removeAttribute?.("data-dragging");
+      return;
+    }
+    const viewport = accountUsageViewportRect();
+    const rect = usage.getBoundingClientRect?.() || {};
+    const width = Math.max(180, Number(rect.width) || 240);
+    const height = Math.max(84, Number(rect.height) || 116);
+    const availableX = Math.max(0, viewport.width - width);
+    const availableY = Math.max(0, viewport.height - height);
+    const left = viewport.left + availableX * accountUsageLayout.anchorX / 10000;
+    const top = viewport.top + availableY * accountUsageLayout.anchorY / 10000;
+    usage.style.position = "fixed";
+    usage.style.left = `${Math.round(left)}px`;
+    usage.style.top = `${Math.round(top)}px`;
+    usage.style.removeProperty?.("right");
+    usage.style.removeProperty?.("bottom");
+  };
+
+  const accountUsageLayoutEqual = (left, right) => (
+    left?.mode === right?.mode
+    && Number(left?.anchorX) === Number(right?.anchorX)
+    && Number(left?.anchorY) === Number(right?.anchorY)
+  );
+
+  const persistAccountUsageLayout = (nextLayout) => {
+    const normalized = normalizeAccountUsageLayout(nextLayout);
+    accountUsageLayout = normalized;
+    accountUsagePendingLayout = normalized;
+    if (accountUsageLayoutSavePromise) return accountUsageLayoutSavePromise;
+    accountUsageLayoutSavePromise = (async () => {
+      while (accountUsagePendingLayout) {
+        const pending = accountUsagePendingLayout;
+        accountUsagePendingLayout = null;
+        try {
+          const settingsResult = await withTimeout(
+            callBridge("/settings/get", {}, { timeoutMs: accountUsageTimeoutMs }),
+            accountUsageTimeoutMs,
+          );
+          const currentConfig = settingsResult?.config && typeof settingsResult.config === "object"
+            ? settingsResult.config
+            : settingsResult;
+          if (!currentConfig || typeof currentConfig !== "object" || currentConfig.status === "error") {
+            throw new Error("读取 Codey 配置失败");
+          }
+          const saveResult = await withTimeout(
+            callBridge(
+              "/api/save_codey_config",
+              { config: { ...currentConfig, accountUsageLayout: pending } },
+              { timeoutMs: accountUsageTimeoutMs },
+            ),
+            accountUsageTimeoutMs,
+          );
+          if (!saveResult || saveResult.status === "error") {
+            throw new Error(saveResult?.message || "保存额度布局失败");
+          }
+          const savedConfig = saveResult.config && typeof saveResult.config === "object"
+            ? saveResult.config
+            : null;
+          accountUsageLayout = normalizeAccountUsageLayout(
+            savedConfig?.accountUsageLayout || pending,
+          );
+          if (typeof window.dispatchEvent === "function" && typeof CustomEvent === "function") {
+            window.dispatchEvent(new CustomEvent(configChangedEvent, {
+              detail: { config: savedConfig || { accountUsageLayout } },
+            }));
+          }
+        } catch (error) {
+          console.warn("[Codey] account usage layout save failed", error);
+        }
+      }
+    })().finally(() => {
+      accountUsageLayoutSavePromise = null;
+    });
+    return accountUsageLayoutSavePromise;
+  };
+
+  const accountUsageHandlePointerMove = (event) => {
+    const drag = accountUsageDragState;
+    if (!drag) return;
+    const viewport = accountUsageViewportRect();
+    const rect = drag.usage.getBoundingClientRect?.() || {};
+    const availableX = Math.max(1, viewport.width - (Number(rect.width) || 240));
+    const availableY = Math.max(1, viewport.height - (Number(rect.height) || 116));
+    const next = normalizeAccountUsageLayout({
+      mode: "free",
+      anchorX: drag.startLayout.anchorX + (Number(event.clientX) - drag.startX) / availableX * 10000,
+      anchorY: drag.startLayout.anchorY + (Number(event.clientY) - drag.startY) / availableY * 10000,
+    });
+    accountUsageLayout = next;
+    applyAccountUsageLayout(drag.usage);
+    event.preventDefault?.();
+  };
+
+  const cancelAccountUsageDrag = ({ persist = false } = {}) => {
+    const drag = accountUsageDragState;
+    if (!drag) return;
+    accountUsageDragState = null;
+    document.removeEventListener?.("pointermove", accountUsageHandlePointerMove, true);
+    document.removeEventListener?.("pointerup", accountUsageHandlePointerUp, true);
+    document.removeEventListener?.("pointercancel", accountUsageHandlePointerUp, true);
+    drag.usage.releasePointerCapture?.(drag.pointerId);
+    drag.usage.removeAttribute?.("data-dragging");
+    if (persist) void persistAccountUsageLayout(accountUsageLayout);
+  };
+
+  const accountUsageHandlePointerUp = () => {
+    cancelAccountUsageDrag({ persist: true });
+  };
+
+  const accountUsageHandlePointerDown = (event) => {
+    if (accountUsageLayout.mode !== "free") return;
+    const usage = event.currentTarget;
+    const handle = event.target?.closest?.(".codey-usage-drag-handle");
+    if (!(usage instanceof HTMLElement) || !handle || !usage.contains?.(handle)) return;
+    if (event.button !== undefined && event.button !== 0) return;
+    cancelAccountUsageDrag();
+    accountUsageDragState = {
+      usage,
+      pointerId: event.pointerId,
+      startX: Number(event.clientX) || 0,
+      startY: Number(event.clientY) || 0,
+      startLayout: { ...accountUsageLayout },
+    };
+    usage.setAttribute("data-dragging", "true");
+    usage.setPointerCapture?.(event.pointerId);
+    document.addEventListener?.("pointermove", accountUsageHandlePointerMove, true);
+    document.addEventListener?.("pointerup", accountUsageHandlePointerUp, true);
+    document.addEventListener?.("pointercancel", accountUsageHandlePointerUp, true);
+    event.preventDefault?.();
+  };
+
+  const accountUsageHandleKeyDown = (event) => {
+    if (accountUsageLayout.mode !== "free") return;
+    const step = event.shiftKey ? 1000 : 500;
+    const next = { ...accountUsageLayout };
+    if (event.key === "ArrowLeft") next.anchorX -= step;
+    else if (event.key === "ArrowRight") next.anchorX += step;
+    else if (event.key === "ArrowUp") next.anchorY -= step;
+    else if (event.key === "ArrowDown") next.anchorY += step;
+    else if (event.key === "Home") next.anchorX = 0;
+    else if (event.key === "End") next.anchorX = 10000;
+    else return;
+    event.preventDefault?.();
+    accountUsageLayout = normalizeAccountUsageLayout(next);
+    applyAccountUsageLayout();
+    void persistAccountUsageLayout(accountUsageLayout);
+  };
+
+  const bindAccountUsageInteractions = (usage) => {
+    if (!(usage instanceof HTMLElement) || usage.__codeyAccountUsageInteractions) return;
+    usage.__codeyAccountUsageInteractions = true;
+    usage.addEventListener?.("pointerdown", accountUsageHandlePointerDown);
+    usage.addEventListener?.("keydown", accountUsageHandleKeyDown);
+  };
   const removeAccountUsage = () => {
+    cancelAccountUsageDrag();
     const usage = document.getElementById(accountUsageId);
     if (usage) {
       usage.__codeyLastUsageHtml = "";
@@ -593,9 +854,16 @@
 
   const accountUsageMount = () => {
     addStyle();
+    const free = accountUsageLayout.mode === "free";
     let usage = document.getElementById(accountUsageId);
-    if (mountedAccountUsageIsUsable(usage)) return usage;
-    const mount = findAccountUsageMount();
+    if (mountedAccountUsageIsUsable(usage)) {
+      bindAccountUsageInteractions(usage);
+      applyAccountUsageLayout(usage);
+      return usage;
+    }
+    const mount = free
+      ? (document.body instanceof HTMLElement ? { target: document.body, before: null } : null)
+      : findAccountUsageMount();
     if (!mount) {
       usage?.remove?.();
       return null;
@@ -611,11 +879,18 @@
     document.querySelectorAll?.("[data-codey-usage-host]")?.forEach?.((host) => {
       if (host !== mount.target) host.removeAttribute?.("data-codey-usage-host");
     });
-    mount.target.setAttribute("data-codey-usage-host", "true");
-    if (usage.parentElement !== mount.target || usage.nextElementSibling !== mount.before) {
-      mount.target.insertBefore(usage, mount.before);
+    mount.target.setAttribute("data-codey-usage-host", free ? "free" : "true");
+    if (free) {
+      if (usage.parentElement !== mount.target) mount.target.appendChild(usage);
+      usage.__codeyUsageAnchor = null;
+    } else {
+      if (usage.parentElement !== mount.target || usage.nextElementSibling !== mount.before) {
+        mount.target.insertBefore(usage, mount.before);
+      }
+      usage.__codeyUsageAnchor = mount.before;
     }
-    usage.__codeyUsageAnchor = mount.before;
+    bindAccountUsageInteractions(usage);
+    applyAccountUsageLayout(usage);
     return usage;
   };
 
@@ -657,12 +932,14 @@
     const aria = segments.map((segment) => segment.aria).join("；");
     usage.dataset.state = "ready";
     usage.dataset.windowCount = String(segments.length);
+    usage.dataset.layoutMode = accountUsageLayout.mode;
     delete usage.dataset.plan;
     usage.style.setProperty("--codey-usage-window-count", String(segments.length));
     usage.setAttribute("aria-label", aria);
     usage.setAttribute("aria-describedby", "codey-account-usage-details");
     usage.removeAttribute?.("title");
     const nextHtml = `
+      ${accountUsageHeaderMarkup(result)}
       <div class="codey-usage-list">
         ${segments.map((segment) => segment.html).join("")}
       </div>
@@ -674,6 +951,7 @@
       usage.__codeyLastUsageHtml = nextHtml;
       usage.innerHTML = nextHtml;
     }
+    applyAccountUsageLayout(usage);
   };
 
   const scheduleAccountUsageCheck = (delayMs = accountUsageRefreshIntervalMs) => {
@@ -940,7 +1218,13 @@
     setUpdateAvailability(result, { dispatch: false });
     if (!hasDetectedUpdate()) scheduleUpdateCheck();
   });
-  window.addEventListener?.(configChangedEvent, () => {
+  window.addEventListener?.(configChangedEvent, (event) => {
+    const nextLayout = event?.detail?.config?.accountUsageLayout
+      || event?.detail?.accountUsageLayout;
+    if (nextLayout) {
+      accountUsageLayout = normalizeAccountUsageLayout(nextLayout);
+      if (accountUsageLastResult?.status === "ok") renderAccountUsage(accountUsageLastResult);
+    }
     accountUsagePollingEnabled = true;
     scheduleAccountUsageCheck(0);
   });
@@ -1055,8 +1339,12 @@
 
   window.addEventListener?.("focus", () => {
     scan();
+    applyAccountUsageLayout();
     scheduleRuntimeHealthCheck(0);
     scheduleAccountUsageCheck(0);
+  });
+  window.addEventListener?.("resize", () => {
+    applyAccountUsageLayout();
   });
   document.addEventListener?.("visibilitychange", () => {
     scheduleRuntimeHealthCheck(0);
