@@ -1527,14 +1527,16 @@ impl CodeyRuntime {
         trace_log_write_protection_active.store(false, Ordering::Release);
         perf_trace::mark("runtime_start.enter");
         let appearance = config.codex_appearance.clone();
+        let account_usage_layout = config.account_usage_layout.clone();
         let user_scripts = config.user_scripts.clone();
         let slim_codex_pet = config.slim_codex_pet;
         let hide_full_access_warning = config.hide_full_access_warning;
         let injection_scripts_task = tokio::task::spawn_blocking(move || {
-            cdp::prepare_injection_scripts_with_appearance(
+            cdp::prepare_injection_scripts_with_appearance_and_account_usage(
                 slim_codex_pet,
                 hide_full_access_warning,
                 &appearance,
+                &account_usage_layout,
                 &user_scripts,
             )
         });

@@ -11,7 +11,7 @@ use codey_runtime_core::bridge::{
 use codey_runtime_core::cdp::{CdpTarget, list_targets, pick_injectable_codex_page_target};
 use serde::{Deserialize, Serialize};
 
-use crate::config::CodexAppearanceConfig;
+use crate::config::{AccountUsageLayoutConfig, CodexAppearanceConfig};
 use crate::error_log;
 
 const SETTINGS_OVERLAY_LOAD_PATH: &str = "/internal/codey/settings-overlay/load";
@@ -221,10 +221,27 @@ pub fn prepare_injection_scripts_with_appearance(
     appearance: &CodexAppearanceConfig,
     user_scripts: &[String],
 ) -> PreparedInjectionScripts {
+    prepare_injection_scripts_with_appearance_and_account_usage(
+        slim_codex_pet,
+        hide_full_access_warning,
+        appearance,
+        &AccountUsageLayoutConfig::default(),
+        user_scripts,
+    )
+}
+
+pub fn prepare_injection_scripts_with_appearance_and_account_usage(
+    slim_codex_pet: bool,
+    hide_full_access_warning: bool,
+    appearance: &CodexAppearanceConfig,
+    account_usage_layout: &AccountUsageLayoutConfig,
+    user_scripts: &[String],
+) -> PreparedInjectionScripts {
     prepare_injection_scripts_for_platform_with_appearance(
         slim_codex_pet,
         hide_full_access_warning,
         Some(appearance),
+        Some(account_usage_layout),
         user_scripts,
         InjectionHostPlatform::current(),
     )
@@ -241,6 +258,7 @@ fn prepare_injection_scripts_for_platform(
         slim_codex_pet,
         hide_full_access_warning,
         None,
+        None,
         user_scripts,
         platform,
     )
@@ -250,6 +268,7 @@ fn prepare_injection_scripts_for_platform_with_appearance(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
     appearance: Option<&CodexAppearanceConfig>,
+    account_usage_layout: Option<&AccountUsageLayoutConfig>,
     user_scripts: &[String],
     platform: InjectionHostPlatform,
 ) -> PreparedInjectionScripts {
@@ -517,7 +536,7 @@ fn prepare_injection_scripts_for_platform_with_appearance(
             visibility,
             probe: Some(probe),
         };
-        let prepared = prepare_script(script, slim_codex_pet, None);
+        let prepared = prepare_script(script, slim_codex_pet, None, account_usage_layout);
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
         descriptors.push(descriptor);
     }
@@ -540,7 +559,7 @@ fn prepare_injection_scripts_for_platform_with_appearance(
                     .to_string(),
             ),
         };
-        let prepared = prepare_script(CODEX_APPEARANCE_SCRIPT, slim_codex_pet, Some(appearance));
+        let prepared = prepare_script(CODEX_APPEARANCE_SCRIPT, slim_codex_pet, Some(appearance), None);
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
         descriptors.push(descriptor);
     }
@@ -590,6 +609,7 @@ fn prepare_script<'a>(
     script: &'a str,
     slim_codex_pet: bool,
     appearance: Option<&CodexAppearanceConfig>,
+    account_usage_layout: Option<&AccountUsageLayoutConfig>,
 ) -> Cow<'a, str> {
     let mut prepared = None;
     if script.contains("__CODEY_SLIM_PET__") {
@@ -603,6 +623,12 @@ fn prepare_script<'a>(
             .expect("Codex appearance settings should serialize");
         let source = prepared.as_deref().unwrap_or(script);
         prepared = Some(source.replace("__CODEY_CODEX_APPEARANCE_SETTINGS__", &settings));
+    }
+    if script.contains("__CODEY_ACCOUNT_USAGE_LAYOUT__") {
+        let layout = serde_json::to_string(&account_usage_layout.cloned().unwrap_or_default())
+            .expect("account usage layout should serialize");
+        let source = prepared.as_deref().unwrap_or(script);
+        prepared = Some(source.replace("__CODEY_ACCOUNT_USAGE_LAYOUT__", &layout));
     }
     prepared.map(Cow::Owned).unwrap_or(Cow::Borrowed(script))
 }

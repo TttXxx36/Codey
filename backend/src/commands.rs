@@ -1083,6 +1083,7 @@ async fn save_codey_config_locked(
     config.user_scripts = config_input.user_scripts;
     config_input.codex_appearance.validate()?;
     config.codex_appearance = config_input.codex_appearance;
+    config.account_usage_layout = config_input.account_usage_layout;
     config.disable_trace_log_writes = config_input.disable_trace_log_writes;
     config.protect_crashpad_pending = config_input.protect_crashpad_pending;
     config.slim_codex_pet = config_input.slim_codex_pet;

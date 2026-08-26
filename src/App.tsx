@@ -12,7 +12,9 @@ import {
 import { invoke } from "./api";
 import { TraceLogModule } from "./TraceLogModule";
 import { ModelPickerDialog } from "./AppDialogs";
+import { AccountUsageLayoutCard } from "./AccountUsageLayoutCard";
 import { CodexAppearanceCard } from "./CodexAppearanceCard";
+import "./styles.account-usage.css";
 import "./styles.codex-appearance.css";
 import { FeaturePolicyCard, SubagentPolicyCard } from "./FeaturePolicyCard";
 import { ModelSection } from "./ModelSection";
@@ -1241,6 +1243,15 @@ export function App({
               onFetchRouteModels={handleFetchRouteModels}
               onSaveOfficialRouteSettings={handleSaveOfficialRouteSettings}
               onSetDefaultModel={handleSetRouteDefaultModel}
+            />
+          </div>
+
+          {/* Codex 额度：位置偏好与可拖动模式 */}
+          <div className="full-row-section">
+            <AccountUsageLayoutCard
+              config={config}
+              isBusy={isBusy}
+              onConfigChange={editConfig}
             />
           </div>
 

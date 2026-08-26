@@ -296,6 +296,49 @@ impl CodexAppearanceConfig {
     }
 }
 
+
+/// Positioning preferences for the account quota panel injected into Codex.
+/// Anchors are normalized to 0..=10000 relative to the main conversation viewport.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountUsageLayoutConfig {
+    #[serde(default = "default_account_usage_layout_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub anchor_x: u16,
+    #[serde(default = "default_account_usage_anchor_y")]
+    pub anchor_y: u16,
+}
+
+fn default_account_usage_layout_mode() -> String {
+    "fixed".to_string()
+}
+
+fn default_account_usage_anchor_y() -> u16 {
+    10_000
+}
+
+impl Default for AccountUsageLayoutConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_account_usage_layout_mode(),
+            anchor_x: 0,
+            anchor_y: default_account_usage_anchor_y(),
+        }
+    }
+}
+
+impl AccountUsageLayoutConfig {
+    pub(crate) fn normalize(&mut self) {
+        self.mode = if self.mode.trim().eq_ignore_ascii_case("free") {
+            "free".to_string()
+        } else {
+            "fixed".to_string()
+        };
+        self.anchor_x = self.anchor_x.min(10_000);
+        self.anchor_y = self.anchor_y.min(10_000);
+    }
+}
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum GpuLaunchMode {
@@ -369,6 +412,10 @@ pub struct CodeyConfig {
     pub user_scripts: Vec<String>,
     #[serde(default)]
     pub codex_appearance: CodexAppearanceConfig,
+    /// Optional layout preference for the account quota panel. It is independent
+    /// from the active provider route and does not change runtime behavior.
+    #[serde(default)]
+    pub account_usage_layout: AccountUsageLayoutConfig,
     /// Codey-owned model selections. Provider connection data remains owned
     /// by cc-switch (or the local Codex configuration).
     #[serde(default)]
@@ -471,6 +518,7 @@ impl Default for CodeyConfig {
             codex_app_path: String::new(),
             user_scripts: Vec::new(),
             codex_appearance: CodexAppearanceConfig::default(),
+            account_usage_layout: AccountUsageLayoutConfig::default(),
             selected_models_by_provider: BTreeMap::new(),
             manual_third_party_models_by_provider: BTreeMap::new(),
             declared_official_models_by_provider: BTreeMap::new(),
@@ -563,6 +611,7 @@ impl CodeyConfig {
         self.webhook.normalize();
         self.prompt_optimization.normalize();
         self.codex_appearance.normalize();
+        self.account_usage_layout.normalize();
         self
     }
 
@@ -2061,6 +2110,31 @@ mod tests {
         assert!(config.show_account_usage_in_header);
     }
 
+    #[test]
+    fn account_usage_layout_defaults_to_fixed_bottom_left_for_existing_configs() {
+        let config = serde_json::from_str::<CodeyConfig>(
+            r#"{"activeProfileId":"","profiles":[]}"#,
+        )
+        .unwrap()
+        .normalize();
+
+        assert_eq!(config.account_usage_layout.mode, "fixed");
+        assert_eq!(config.account_usage_layout.anchor_x, 0);
+        assert_eq!(config.account_usage_layout.anchor_y, 10_000);
+    }
+
+    #[test]
+    fn account_usage_layout_normalizes_mode_and_relative_anchor() {
+        let config = serde_json::from_str::<CodeyConfig>(
+            r#"{"activeProfileId":"","profiles":[],"accountUsageLayout":{"mode":" FREE ","anchorX":65535,"anchorY":65535}}"#,
+        )
+        .unwrap()
+        .normalize();
+
+        assert_eq!(config.account_usage_layout.mode, "free");
+        assert_eq!(config.account_usage_layout.anchor_x, 10_000);
+        assert_eq!(config.account_usage_layout.anchor_y, 10_000);
+    }
     #[test]
     fn prompt_optimization_defaults_to_disabled_for_existing_configs() {
         let config = serde_json::from_str::<CodeyConfig>(r#"{"activeProfileId":"","profiles":[]}"#)
