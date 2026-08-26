@@ -6,7 +6,14 @@ import {
 } from "@tabler/icons-react";
 
 import type { CodexAppearanceConfig, Config } from "./App.types";
-import { Badge, Button, Card } from "./components/mantine";
+import {
+  ActionGroup,
+  Button,
+  FieldRow,
+  SectionHeader,
+  StatusChip,
+  Surface,
+} from "./components/mantine";
 
 const DEFAULT_APPEARANCE: CodexAppearanceConfig = {
   backgroundDataUrl: "",
@@ -105,22 +112,19 @@ export function CodexAppearanceCard({
       className="secondary-section codex-appearance-section"
       aria-labelledby="codex-appearance-title"
     >
-      <div className="section-title compact">
-        <div className="section-heading">
-          <span className="section-icon" aria-hidden="true">
-            <IconAdjustmentsHorizontal size={15} />
-          </span>
-          <div>
-            <h2 id="codex-appearance-title">Codex 外观调整</h2>
-            <p>统一管理背景图片、对话宽度和界面遮罩。</p>
-          </div>
-        </div>
-        <Badge variant={appearance.backgroundDataUrl ? "success" : "secondary"}>
-          {appearance.backgroundDataUrl ? "背景已设置" : "未设置背景"}
-        </Badge>
-      </div>
+      <SectionHeader
+        id="codex-appearance-title"
+        icon={<IconAdjustmentsHorizontal size={15} />}
+        title="Codex 外观调整"
+        description="统一管理背景图片、对话宽度和界面遮罩。"
+        status={
+          <StatusChip tone={appearance.backgroundDataUrl ? "success" : "secondary"}>
+            {appearance.backgroundDataUrl ? "背景已设置" : "未设置背景"}
+          </StatusChip>
+        }
+      />
 
-      <Card className="secondary-card codex-appearance-card">
+      <Surface className="codex-appearance-card">
         <div className="codex-appearance-background-row">
           <div className="codex-appearance-copy">
             <strong>背景图片</strong>
@@ -134,7 +138,7 @@ export function CodexAppearanceCard({
             )}
             {fileError && <span className="codex-appearance-error">{fileError}</span>}
           </div>
-          <div className="codex-appearance-background-actions">
+          <ActionGroup className="codex-appearance-background-actions">
             {appearance.backgroundDataUrl && (
               <img
                 className="codex-appearance-preview"
@@ -175,15 +179,15 @@ export function CodexAppearanceCard({
                 <IconTrash aria-hidden="true" />
               </Button>
             )}
-          </div>
+          </ActionGroup>
         </div>
 
         <div className="codex-appearance-controls">
-          <label className="codex-appearance-control">
-            <span className="codex-appearance-control-heading">
-              <span>背景显示强度</span>
-              <output>{appearance.backgroundOpacity}%</output>
-            </span>
+          <FieldRow
+            className="codex-appearance-control"
+            label="背景显示强度"
+            value={appearance.backgroundOpacity + "%"}
+          >
             <input
               type="range"
               min="0"
@@ -195,12 +199,12 @@ export function CodexAppearanceCard({
                 updateAppearance({ backgroundOpacity: Number(event.target.value) })
               }
             />
-          </label>
-          <label className="codex-appearance-control">
-            <span className="codex-appearance-control-heading">
-              <span>界面遮罩强度</span>
-              <output>{appearance.surfaceOpacity}%</output>
-            </span>
+          </FieldRow>
+          <FieldRow
+            className="codex-appearance-control"
+            label="界面遮罩强度"
+            value={appearance.surfaceOpacity + "%"}
+          >
             <input
               type="range"
               min="0"
@@ -212,12 +216,12 @@ export function CodexAppearanceCard({
                 updateAppearance({ surfaceOpacity: Number(event.target.value) })
               }
             />
-          </label>
-          <label className="codex-appearance-control">
-            <span className="codex-appearance-control-heading">
-              <span>对话内容宽度</span>
-              <output>{appearance.chatWidth}px</output>
-            </span>
+          </FieldRow>
+          <FieldRow
+            className="codex-appearance-control"
+            label="对话内容宽度"
+            value={appearance.chatWidth + "px"}
+          >
             <input
               type="range"
               min="800"
@@ -229,13 +233,13 @@ export function CodexAppearanceCard({
                 updateAppearance({ chatWidth: Number(event.target.value) })
               }
             />
-          </label>
+          </FieldRow>
         </div>
 
         <small className="codex-appearance-help">
           保存后立即尝试应用；如果 Codex 页面正在重载，新的设置会在下一次 Codey 启动时自动恢复。
         </small>
-      </Card>
+      </Surface>
     </section>
   );
 }

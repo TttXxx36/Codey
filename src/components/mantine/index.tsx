@@ -824,3 +824,128 @@ export const DialogDescription = React.forwardRef<
   );
 });
 DialogDescription.displayName = "DialogDescription";
+
+
+export type SurfaceTone = "default" | "subtle";
+
+export interface SurfaceProps extends CardProps {
+  tone?: SurfaceTone;
+}
+
+export function Surface({
+  className,
+  tone = "default",
+  ...props
+}: SurfaceProps) {
+  return (
+    <Card
+      {...props}
+      className={classNames(
+        "codey-surface",
+        tone === "subtle" && "codey-surface-subtle",
+        className,
+      )}
+    />
+  );
+}
+
+export interface SectionHeaderProps {
+  className?: string;
+  description?: React.ReactNode;
+  icon?: React.ReactNode;
+  id?: string;
+  status?: React.ReactNode;
+  title: React.ReactNode;
+}
+
+export function SectionHeader({
+  className,
+  description,
+  icon,
+  id,
+  status,
+  title,
+}: SectionHeaderProps) {
+  return (
+    <div className={classNames("section-title compact", className)}>
+      <div className="section-heading">
+        {icon ? (
+          <span className="section-icon" aria-hidden="true">
+            {icon}
+          </span>
+        ) : null}
+        <div>
+          <h2 id={id}>{title}</h2>
+          {description ? <p>{description}</p> : null}
+        </div>
+      </div>
+      {status ? (
+        <div className="section-header-status">{status}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export type StatusChipProps = Omit<BadgeProps, "variant"> & {
+  tone?: BadgeVariant;
+};
+
+export function StatusChip({
+  className,
+  tone = "secondary",
+  ...props
+}: StatusChipProps) {
+  return (
+    <Badge
+      {...props}
+      className={classNames("codey-status-chip", className)}
+      variant={tone}
+    />
+  );
+}
+
+export interface FieldRowProps
+  extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  label: React.ReactNode;
+  value?: React.ReactNode;
+}
+
+export function FieldRow({
+  children,
+  className,
+  label,
+  value,
+  ...props
+}: FieldRowProps) {
+  return (
+    <label {...props} className={classNames("codey-field-row", className)}>
+      <span className="codey-field-row-heading">
+        <span>{label}</span>
+        {value != null ? <output>{value}</output> : null}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+export interface ActionGroupProps
+  extends React.HTMLAttributes<HTMLDivElement> {
+  direction?: "row" | "column";
+}
+
+export function ActionGroup({
+  className,
+  direction = "row",
+  ...props
+}: ActionGroupProps) {
+  return (
+    <div
+      {...props}
+      className={classNames(
+        "codey-action-group",
+        direction === "column" && "codey-action-group-column",
+        className,
+      )}
+    />
+  );
+}
