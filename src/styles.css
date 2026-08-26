@@ -4,20 +4,81 @@
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif;
   font-synthesis: none;
-  --mac-blue: #007aff;
-  --mac-green: #34c759;
-  --mac-orange: #ff9500;
-  --mac-red: #ff3b30;
-  --mac-gray-bg: #f5f5f7;
-  --mac-card-bg: #ffffff;
-  --mac-border: rgba(0, 0, 0, 0.08);
-  --mac-border-subtle: rgba(0, 0, 0, 0.04);
-  --mac-text-primary: #1d1d1f;
-  --mac-text-secondary: #6e6e73;
-  --mac-text-tertiary: #8e8e93;
-  --success: #34c759;
-  --success-bg: rgba(52, 199, 89, 0.1);
-  --success-border: rgba(52, 199, 89, 0.25);
+
+  /*
+   * Codey semantic design tokens.
+   * Mantine owns accessible control and overlay behavior, Tailwind stays local
+   * to compact utility composition, and CSS owns tokens, layout, and states.
+   */
+  --codey-color-canvas: #f5f5f7;
+  --codey-color-canvas-top: #fafafc;
+  --codey-color-canvas-bottom: #f2f2f5;
+  --codey-color-surface: #ffffff;
+  --codey-color-surface-subtle: #fbfbfd;
+  --codey-color-surface-muted: #f2f2f7;
+  --codey-color-surface-secondary: #ebebef;
+  --codey-color-surface-accent: rgba(0, 122, 255, 0.03);
+  --codey-color-accent-muted: #e5e5ea;
+  --codey-color-border: rgba(0, 0, 0, 0.08);
+  --codey-color-border-subtle: rgba(0, 0, 0, 0.04);
+  --codey-color-border-surface: rgba(0, 0, 0, 0.06);
+  --codey-color-border-strong: rgba(0, 0, 0, 0.14);
+  --codey-color-border-hover: rgba(0, 0, 0, 0.1);
+  --codey-color-text-primary: #1d1d1f;
+  --codey-color-text-strong: #1c1c1e;
+  --codey-color-text-secondary-strong: #3a3a3c;
+  --codey-color-text-secondary: #6e6e73;
+  --codey-color-text-tertiary: #8e8e93;
+  --codey-color-text-inverse: #ffffff;
+  --codey-color-accent: #007aff;
+  --codey-color-accent-hover: #0068d9;
+  --codey-color-accent-bg: rgba(0, 122, 255, 0.09);
+  --codey-color-success: #34c759;
+  --codey-color-success-strong: #248a3d;
+  --codey-color-success-bg: rgba(52, 199, 89, 0.1);
+  --codey-color-success-border: rgba(52, 199, 89, 0.25);
+  --codey-color-warning: #ff9500;
+  --codey-color-warning-strong: #c26d00;
+  --codey-color-warning-bg: rgba(255, 149, 0, 0.13);
+  --codey-color-danger: #ff3b30;
+  --codey-color-danger-strong: #d70015;
+  --codey-color-danger-bg: rgba(255, 59, 48, 0.11);
+  --codey-color-info-bg: rgba(0, 122, 255, 0.11);
+  --codey-space-1: 4px;
+  --codey-space-2: 8px;
+  --codey-space-3: 12px;
+  --codey-space-4: 16px;
+  --codey-space-5: 20px;
+  --codey-space-6: 24px;
+  --codey-radius-sm: 6px;
+  --codey-radius-md: 8px;
+  --codey-radius-lg: 10px;
+  --codey-radius-xl: 14px;
+  --codey-radius-pill: 999px;
+  --codey-shadow-surface:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 12px 28px -18px rgba(16, 24, 40, 0.14);
+  --codey-shadow-surface-hover:
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 18px 40px -18px rgba(16, 24, 40, 0.18);
+  --codey-focus-color: #007aff;
+  --codey-focus-ring: rgba(0, 122, 255, 0.12);
+
+  /* Compatibility aliases for the existing feature styles. */
+  --mac-blue: var(--codey-color-accent);
+  --mac-green: var(--codey-color-success);
+  --mac-orange: var(--codey-color-warning);
+  --mac-red: var(--codey-color-danger);
+  --mac-gray-bg: var(--codey-color-canvas);
+  --mac-card-bg: var(--codey-color-surface);
+  --mac-border: var(--codey-color-border);
+  --mac-border-subtle: var(--codey-color-border-subtle);
+  --mac-text-primary: var(--codey-color-text-primary);
+  --mac-text-secondary: var(--codey-color-text-secondary);
+  --mac-text-tertiary: var(--codey-color-text-tertiary);
+  --success: var(--codey-color-success);
+  --success-bg: var(--codey-color-success-bg);
+  --success-border: var(--codey-color-success-border);
 }
 
 :host {
@@ -61,34 +122,34 @@ input:focus-visible,
 [role="button"]:focus-visible,
 [role="switch"]:focus-visible,
 [role="checkbox"]:focus-visible {
-  outline: 2px solid var(--mac-blue);
+  outline: 2px solid var(--codey-focus-color);
   outline-offset: 2px;
 }
 
 .app-shell {
-  --background: #f5f5f7;
-  --foreground: #1d1d1f;
-  --card: #ffffff;
-  --card-foreground: #1d1d1f;
-  --primary: #1c1c1e;
-  --primary-foreground: #ffffff;
-  --secondary: #ebebef;
-  --secondary-foreground: #3a3a3c;
-  --muted: #f2f2f7;
-  --muted-foreground: #6e6e73;
-  --accent: #e5e5ea;
-  --accent-foreground: #1d1d1f;
-  --destructive: #ff3b30;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: #ffffff;
-  --ring: #007aff;
+  --background: var(--codey-color-canvas);
+  --foreground: var(--codey-color-text-primary);
+  --card: var(--codey-color-surface);
+  --card-foreground: var(--codey-color-text-primary);
+  --primary: var(--codey-color-text-strong);
+  --primary-foreground: var(--codey-color-text-inverse);
+  --secondary: var(--codey-color-surface-secondary);
+  --secondary-foreground: var(--codey-color-text-secondary-strong);
+  --muted: var(--codey-color-surface-muted);
+  --muted-foreground: var(--codey-color-text-secondary);
+  --accent: var(--codey-color-accent-muted);
+  --accent-foreground: var(--codey-color-text-primary);
+  --destructive: var(--codey-color-danger);
+  --border: var(--codey-color-border);
+  --input: var(--codey-color-surface);
+  --ring: var(--codey-color-accent);
   position: relative;
   display: flex;
   height: 100%;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(180deg, #fafafc 0%, #f2f2f5 100%);
+  background: linear-gradient(180deg, var(--codey-color-canvas-top) 0%, var(--codey-color-canvas-bottom) 100%);
   color: var(--foreground);
   isolation: isolate;
 }
@@ -111,10 +172,10 @@ input:focus-visible,
   top: 10px;
   left: 16px;
   border: 1px solid var(--ring);
-  border-radius: 10px;
-  background: #ffffff;
+  border-radius: var(--codey-radius-lg);
+  background: var(--codey-color-surface);
   padding: 8px 14px;
-  color: #1d1d1f;
+  color: var(--codey-color-text-primary);
   font-size: 12px;
   opacity: 0;
   pointer-events: none;
@@ -385,15 +446,15 @@ input:focus-visible,
   height: 30px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 8px;
-  background: rgba(0, 122, 255, 0.09);
-  color: var(--mac-blue);
+  border-radius: var(--codey-radius-md);
+  background: var(--codey-color-accent-bg);
+  color: var(--codey-color-accent);
 }
 
 .section-title h1,
 .section-title h2 {
   margin: 2px 0 2px;
-  color: #1d1d1f;
+  color: var(--codey-color-text-primary);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -401,7 +462,7 @@ input:focus-visible,
 
 .section-title p {
   margin: 0;
-  color: #6e6e73;
+  color: var(--codey-color-text-secondary);
   font-size: 12px;
   line-height: 1.4;
 }
@@ -417,7 +478,62 @@ input:focus-visible,
 .badge-secondary,
 .mantine-Badge-root[data-variant="light"][data-color="gray"] {
   background: rgba(0, 0, 0, 0.07);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  color: #3a3a3c;
+  border: 1px solid var(--codey-color-border-strong);
+  color: var(--codey-color-text-secondary-strong);
   font-weight: 500;
+}
+
+
+.codey-surface {
+  overflow: hidden;
+  border: 1px solid var(--codey-color-border-surface);
+  border-radius: var(--codey-radius-xl);
+  background: var(--codey-color-surface);
+  box-shadow: var(--codey-shadow-surface);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.codey-surface:hover {
+  border-color: var(--codey-color-border-hover);
+  box-shadow: var(--codey-shadow-surface-hover);
+}
+
+.codey-surface-subtle {
+  background: var(--codey-color-surface-subtle);
+}
+
+.section-header-status {
+  flex: 0 0 auto;
+}
+
+.codey-action-group {
+  display: flex;
+  align-items: center;
+  gap: var(--codey-space-2);
+}
+
+.codey-action-group-column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.codey-field-row {
+  display: grid;
+  gap: var(--codey-space-2);
+  min-width: 0;
+}
+
+.codey-field-row-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--codey-space-2);
+  color: var(--codey-color-text-secondary-strong);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.codey-field-row-heading output {
+  color: var(--codey-color-accent);
+  font-variant-numeric: tabular-nums;
 }

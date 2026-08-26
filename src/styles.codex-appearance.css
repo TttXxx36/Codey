@@ -1,24 +1,24 @@
 .codex-appearance-card {
   display: grid;
-  gap: 16px;
+  gap: var(--codey-space-4);
 }
 
 .codex-appearance-background-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--codey-space-5);
   min-width: 0;
 }
 
 .codex-appearance-copy {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  gap: var(--codey-space-1);
 }
 
 .codex-appearance-copy strong {
-  color: #1d1d1f;
+  color: var(--codey-color-text-primary);
   font-size: 13px;
   font-weight: 650;
 }
@@ -27,82 +27,66 @@
 .codex-appearance-help,
 .codex-appearance-file-name,
 .codex-appearance-error {
-  color: #6e6e73;
+  color: var(--codey-color-text-secondary);
   font-size: 11px;
   line-height: 1.45;
 }
 
 .codex-appearance-file-name {
   overflow: hidden;
-  color: #007aff;
+  color: var(--codey-color-accent);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .codex-appearance-error {
-  color: #d70015;
+  color: var(--codey-color-danger-strong);
 }
 
 .codex-appearance-background-actions {
-  display: flex;
   flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .codex-appearance-preview {
   width: 72px;
   height: 42px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
+  border: 1px solid var(--codey-color-border);
+  border-radius: var(--codey-radius-md);
   object-fit: cover;
 }
 
 .codex-appearance-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--codey-space-3);
 }
 
 .codex-appearance-control {
-  display: grid;
-  gap: 8px;
   min-width: 0;
-}
-
-.codex-appearance-control-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: #3a3a3c;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.codex-appearance-control-heading output {
-  color: #007aff;
-  font-variant-numeric: tabular-nums;
 }
 
 .codex-appearance-control input[type="range"] {
   width: 100%;
-  accent-color: #007aff;
+  accent-color: var(--codey-color-accent);
+}
+
+.codex-appearance-help {
+  margin: 0;
 }
 
 @media (max-width: 760px) {
-  .codex-appearance-background-row,
-  .codex-appearance-controls {
-    grid-template-columns: 1fr;
+  .codex-appearance-background-row {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .codex-appearance-background-actions {
-    justify-content: flex-start;
+  .codex-appearance-controls {
+    grid-template-columns: 1fr;
   }
 
-  .codex-appearance-controls {
-    display: grid;
+  .codex-appearance-background-actions {
+    justify-content: flex-start;
   }
 }
