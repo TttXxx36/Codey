@@ -1,6 +1,6 @@
 // Keep Codex's native model allowlist aligned with the current Codey channel.
 (() => {
-  const patchVersion = "14";
+  const patchVersion = "15";
   const existingPatch = window.__codeyModelWhitelistPatch;
   if (existingPatch?.version === patchVersion) {
     void existingPatch.refresh();
@@ -118,6 +118,27 @@
     return cleanText(separator > 0 ? modelName.slice(separator + 1) : modelName);
   };
 
+  const officialModelDisplayName = (modelName) => {
+    const value = modelFallbackName(modelName);
+    const match = value.match(/^gpt-(\d+(?:\.\d+)?)(?:-(.+))?$/i);
+    if (!match) return value;
+    const suffix = match[2]
+      ? match[2].split(/[-_]+/).filter(Boolean).map((part) => (
+        part.charAt(0).toUpperCase() + part.slice(1)
+      )).join(" ")
+      : "";
+    return "GPT-" + match[1] + (suffix ? " " + suffix : "");
+  };
+
+  const isDirectOfficialRoute = (routeName, displayName) => {
+    const routeText = [routeName, displayName]
+      .map(cleanText)
+      .join(" ")
+      .toLocaleLowerCase();
+    return routeText.includes("官方直登")
+      || routeText.includes("openai direct")
+      || routeText.includes("official openai direct");
+  };
   const sameModelNames = (left, right) => (
     Array.isArray(left)
     && left.length === right.length
@@ -242,21 +263,32 @@
       || displayParts.routeName
       || cleanText(route?.providerId)
       || "";
-    const sourceModel = metadataText(metadata, "source_model") || route?.sourceModel || "";
-    const modelLabel = metadataText(metadata, "model_display_name")
+    const providerId = cleanText(route?.providerId)
+      || metadataText(metadata, "provider_id");
+    const sourceModel = metadataText(metadata, "source_model")
+      || route?.sourceModel
+      || "";
+    const rawModelLabel = metadataText(metadata, "model_display_name")
       || sourceModel
       || displayParts.modelName
       || modelFallbackName(modelName);
+    const directOfficial = isDirectOfficialRoute(routeName, metadataDisplayName);
+    const modelLabel = directOfficial
+      ? officialModelDisplayName(rawModelLabel || modelName)
+      : rawModelLabel;
+    const resolvedRouteName = directOfficial ? "" : routeName;
     const currentDisplayName = cleanText(current?.displayName);
-    const displayName = metadataDisplayName
-      || (routeName && modelLabel ? `${routeName} / ${modelLabel}` : "")
-      || currentDisplayName
-      || modelName;
+    const displayName = directOfficial
+      ? modelLabel
+      : metadataDisplayName
+        || (routeName && modelLabel ? routeName + " / " + modelLabel : "")
+        || currentDisplayName
+        || modelName;
     return {
-      routeName,
+      routeName: resolvedRouteName,
       modelName: modelLabel,
       displayName,
-      providerId: cleanText(route?.providerId) || metadataText(metadata, "provider_id"),
+      providerId,
       sourceModel: sourceModel || modelName,
     };
   };
@@ -302,7 +334,7 @@
       codeyModelName: presentation.modelName,
       description: typeof current?.description === "string" && current.description
         ? current.description
-        : presentation.routeName || "Custom model",
+        : presentation.routeName || presentation.modelName || "Custom model",
       hidden: false,
       isDefault: modelName === catalog.defaultModel,
       defaultReasoningEffort: requestedDefault?.trim() || "medium",
@@ -683,7 +715,7 @@
     const routeStarts = [];
     let previousRoute = "";
     for (const { item, routeName } of items) {
-      if (routeName === previousRoute) continue;
+      if (!routeName || routeName === previousRoute) continue;
       routeStarts.push({ item, routeName });
       previousRoute = routeName;
     }
@@ -708,11 +740,24 @@
     if (!catalog.loaded || disposed || typeof document.querySelectorAll !== "function") return;
     ensureGroupedMenuStyles();
     const byDisplayName = new Map();
+    const addMenuAlias = (alias, entry) => {
+      const key = cleanText(alias).toLocaleLowerCase();
+      if (key && !byDisplayName.has(key)) byDisplayName.set(key, entry);
+    };
     for (const modelName of catalog.models) {
       const presentation = modelPresentation(modelName);
       const displayName = cleanText(presentation.displayName);
-      if (!displayName || !presentation.routeName || !presentation.modelName) continue;
-      byDisplayName.set(displayName, { modelName, presentation });
+      if (!displayName || !presentation.modelName) continue;
+      const metadata = catalog.modelMetadata[modelName];
+      const entry = { modelName, presentation };
+      [
+        presentation.displayName,
+        presentation.modelName,
+        modelName,
+        presentation.sourceModel,
+        metadataText(metadata, "display_name"),
+        metadataText(metadata, "model_display_name"),
+      ].forEach((alias) => addMenuAlias(alias, entry));
     }
     if (byDisplayName.size === 0) return;
     const containers = Array.from(document.querySelectorAll(groupedMenuSelector) || []);
@@ -721,28 +766,36 @@
       const enhancedItems = [];
       for (const item of items) {
         const itemText = cleanText(item.textContent);
+        const itemKey = itemText.toLocaleLowerCase();
         const existingModel = item.dataset?.codeyRouteModel || "";
         const existingPresentation = existingModel ? modelPresentation(existingModel) : null;
-        const existingPresentationStillMatches = existingPresentation?.routeName
-          && [existingPresentation.displayName, existingPresentation.modelName]
-            .map(cleanText)
-            .includes(itemText);
+        const existingAliases = existingPresentation
+          ? [
+            existingPresentation.displayName,
+            existingPresentation.modelName,
+            existingModel,
+            existingPresentation.sourceModel,
+            metadataText(catalog.modelMetadata[existingModel], "display_name"),
+          ].map((value) => cleanText(value).toLocaleLowerCase())
+            .filter(Boolean)
+          : [];
+        const existingPresentationStillMatches = Boolean(
+          existingPresentation?.modelName && existingAliases.includes(itemKey),
+        );
         const matched = existingPresentationStillMatches
           ? { modelName: existingModel, presentation: existingPresentation }
-          : byDisplayName.get(itemText);
-        if (!matched?.presentation?.routeName || !matched.presentation.modelName) continue;
+          : byDisplayName.get(itemKey);
+        if (!matched?.presentation?.modelName) continue;
         item.dataset.codeyRouteModel = matched.modelName;
         item.dataset.codeyRouteName = matched.presentation.routeName;
         item.classList?.add?.("codey-model-route-item");
         item.setAttribute?.(
           "aria-label",
-          `${matched.presentation.routeName} / ${matched.presentation.modelName}`,
+          matched.presentation.routeName
+            ? matched.presentation.routeName + " / " + matched.presentation.modelName
+            : matched.presentation.modelName,
         );
-        replaceTextOnce(
-          item,
-          matched.presentation.displayName,
-          matched.presentation.modelName,
-        );
+        replaceTextOnce(item, itemText, matched.presentation.modelName);
         enhancedItems.push({ item, routeName: matched.presentation.routeName });
       }
       if (enhancedItems.length === 0) continue;
