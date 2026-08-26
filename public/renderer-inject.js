@@ -703,11 +703,6 @@
     usage.style.removeProperty?.("bottom");
   };
 
-  const accountUsageLayoutEqual = (left, right) => (
-    left?.mode === right?.mode
-    && Number(left?.anchorX) === Number(right?.anchorX)
-    && Number(left?.anchorY) === Number(right?.anchorY)
-  );
 
   const persistAccountUsageLayout = (nextLayout) => {
     const normalized = normalizeAccountUsageLayout(nextLayout);
