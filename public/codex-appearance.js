@@ -1,11 +1,10 @@
 (() => {
-  const VERSION = 1;
+  const VERSION = 2;
   const initialSettings = __CODEY_CODEX_APPEARANCE_SETTINGS__;
   const BACKGROUND_ID = "codey-codex-appearance-background";
   const STYLE_ID = "codey-codex-appearance-style";
-  const BUTTON_ID = "codey-codex-appearance-button";
-  const BUTTON_STYLE_ID = "codey-codex-appearance-button-style";
-  const BUTTON_WRAPPER_CLASS = "codey-codex-appearance-action";
+  const STALE_APPEARANCE_BUTTON_ID = "codey-codex-appearance-button";
+  const STALE_APPEARANCE_BUTTON_STYLE_ID = "codey-codex-appearance-button-style";
   const LEGACY_STORAGE_KEY = "codex.customizer.appearance.v1";
   const LEGACY_IDS = [
     "codex-customizer-background",
@@ -34,9 +33,7 @@
   let observedRegion = null;
   let observedToolbar = null;
   let mutationObserver = null;
-  let appearanceObserverTimer = 0;
   const delayedSyncTimers = new Set();
-  let appearanceMountDirty = true;
   let configChangeHandler = null;
   let resizeHandler = null;
 
@@ -91,125 +88,12 @@
     return style;
   }
 
-  function ensureButtonStyle() {
-    let style = document.getElementById(BUTTON_STYLE_ID);
-    if (!(style instanceof HTMLStyleElement)) {
-      style = document.createElement("style");
-      style.id = BUTTON_STYLE_ID;
-      style.textContent = `
-        .${BUTTON_WRAPPER_CLASS} { -webkit-app-region: no-drag !important; pointer-events: auto !important; display: flex; flex: 0 0 auto; align-items: center; }
-        #${BUTTON_ID} { -webkit-app-region: no-drag !important; pointer-events: auto !important; position: relative; z-index: 2147483642; display: inline-grid; place-items: center; width: 28px; height: 28px; flex: 0 0 auto; border: 0; border-radius: 7px; padding: 0; background: transparent; color: inherit; cursor: pointer; opacity: .86; user-select: none; transition: background .15s ease, opacity .15s ease, transform .15s ease; }
-        #${BUTTON_ID}:hover { background: rgba(127, 127, 127, .16); opacity: 1; }
-        #${BUTTON_ID}:active { transform: translateY(1px); }
-        #${BUTTON_ID}:focus-visible { outline: 2px solid rgba(139, 151, 255, .72); outline-offset: 2px; }
-        #${BUTTON_ID} svg { display: block; width: 17px; height: 17px; }
-      `;
-      document.documentElement?.appendChild(style);
-    }
-    return style;
+  function removeStaleAppearanceButton() {
+    document.getElementById(STALE_APPEARANCE_BUTTON_ID)?.parentElement?.remove?.();
+    document.getElementById(STALE_APPEARANCE_BUTTON_STYLE_ID)?.remove?.();
   }
 
-  const appearanceIcon = `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 7h10M18 7h2M4 12h2M10 12h10M4 17h10M18 17h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-      <circle cx="16" cy="7" r="2" fill="Canvas" stroke="currentColor" stroke-width="1.8"></circle>
-      <circle cx="8" cy="12" r="2" fill="Canvas" stroke="currentColor" stroke-width="1.8"></circle>
-      <circle cx="16" cy="17" r="2" fill="Canvas" stroke="currentColor" stroke-width="1.8"></circle>
-    </svg>
-  `;
-
-  function findHeaderShareMount() {
-    const share = [...document.querySelectorAll("button")].find((candidate) => {
-      const label = candidate.getAttribute("aria-label") || "";
-      return /^(分享|Share)$/i.test(label);
-    });
-    if (!share) return null;
-    let child = share;
-    while (child.parentElement) {
-      const parent = child.parentElement;
-      const className = typeof parent.className === "string" ? parent.className : "";
-      if (/\bms-auto\b/.test(className)) {
-        return { target: parent, before: child.nextElementSibling };
-      }
-      child = parent;
-    }
-    return null;
-  }
-
-  function findFallbackButtonMount() {
-    const existingCodeyButton = document.getElementById("codey-settings-button");
-    if (!(existingCodeyButton instanceof HTMLElement)) return null;
-    const header = existingCodeyButton.closest("header, nav");
-    if (!(header instanceof HTMLElement)) return null;
-    let child = existingCodeyButton;
-    while (child.parentElement && child.parentElement !== header) child = child.parentElement;
-    return { target: header, before: child };
-  }
-
-  function scheduleAppearanceButtonSync() {
-    appearanceMountDirty = true;
-    if (appearanceObserverTimer) return;
-    appearanceObserverTimer = window.setTimeout(() => {
-      appearanceObserverTimer = 0;
-      if (!appearanceMountDirty) return;
-      appearanceMountDirty = false;
-      ensureAppearanceButton();
-    }, 80);
-  }
-
-  function ensureAppearanceButton() {
-    if (!ownsBackground && hasLegacyCustomizer()) return false;
-    if (!appearanceMountDirty) {
-      const current = document.getElementById(BUTTON_ID);
-      const wrapper = current?.parentElement;
-      if (current instanceof HTMLButtonElement
-        && current.isConnected
-        && wrapper instanceof HTMLElement
-        && wrapper.classList.contains(BUTTON_WRAPPER_CLASS)
-        && wrapper.nextElementSibling === current.__codeyAppearanceAnchor) {
-        return true;
-      }
-      appearanceMountDirty = true;
-    }
-    ensureButtonStyle();
-    const mount = findHeaderShareMount() || findFallbackButtonMount();
-    let button = document.getElementById(BUTTON_ID);
-    if (!mount) {
-      button?.parentElement?.remove?.();
-      appearanceMountDirty = true;
-      return false;
-    }
-    let wrapper = button?.parentElement;
-    if (!(wrapper instanceof HTMLElement) || !wrapper.classList.contains(BUTTON_WRAPPER_CLASS)) {
-      wrapper = document.createElement("div");
-      wrapper.className = BUTTON_WRAPPER_CLASS;
-    }
-    if (!(button instanceof HTMLButtonElement)) {
-      button = document.createElement("button");
-      button.id = BUTTON_ID;
-      button.type = "button";
-      button.setAttribute("aria-label", "调整 Codex 外观");
-      button.title = "调整 Codex 背景、对话宽度和遮罩";
-      button.innerHTML = appearanceIcon;
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof window.__codeySettingsOverlay?.toggle === "function") {
-          window.__codeySettingsOverlay.toggle();
-        } else {
-          document.getElementById("codey-settings-button")?.click?.();
-        }
-      }, true);
-    }
-    if (button.parentElement !== wrapper) wrapper.appendChild(button);
-    if (wrapper.parentElement !== mount.target || wrapper.nextElementSibling !== mount.before) {
-      mount.target.insertBefore(wrapper, mount.before || null);
-    }
-    button.__codeyAppearanceAnchor = mount.before || null;
-    appearanceMountDirty = false;
-    return true;
-  }
-
+  removeStaleAppearanceButton();
   function ensureBackground() {
     let layer = document.getElementById(BACKGROUND_ID);
     if (!(layer instanceof HTMLDivElement)) {
@@ -303,7 +187,6 @@
   function scheduleDelayedSync(delay) {
     const timer = window.setTimeout(() => {
       delayedSyncTimers.delete(timer);
-      scheduleAppearanceButtonSync();
       scheduleSync();
     }, delay);
     delayedSyncTimers.add(timer);
@@ -324,7 +207,6 @@
     }
 
     if (!wasOwner && !ownsBackground && !hasExplicitSettings && hasLegacyCustomizer()) {
-      ensureAppearanceButton();
       return snapshot();
     }
 
@@ -370,7 +252,6 @@
       document.documentElement?.setAttribute("data-codey-appearance-active", "false");
       currentBackground?.remove?.();
       observeLayout();
-      ensureAppearanceButton();
       return snapshot();
     }
 
@@ -388,7 +269,6 @@
     ].join(";");
     syncBackgroundBounds(background);
     observeLayout();
-    ensureAppearanceButton();
     scheduleSync();
     return snapshot();
   }
@@ -406,10 +286,8 @@
 
   function destroy() {
     if (syncTimer) window.clearTimeout(syncTimer);
-    if (appearanceObserverTimer) window.clearTimeout(appearanceObserverTimer);
     for (const timer of delayedSyncTimers) window.clearTimeout(timer);
     delayedSyncTimers.clear();
-    appearanceObserverTimer = 0;
     syncTimer = 0;
     resizeObserver?.disconnect?.();
     resizeObserver = null;
@@ -421,8 +299,7 @@
     resizeHandler = null;
     document.getElementById(BACKGROUND_ID)?.remove?.();
     document.getElementById(STYLE_ID)?.remove?.();
-    document.getElementById(BUTTON_ID)?.parentElement?.remove?.();
-    document.getElementById(BUTTON_STYLE_ID)?.remove?.();
+    removeStaleAppearanceButton();
     document.documentElement?.removeAttribute?.("data-codey-appearance-active");
   }
 
@@ -448,34 +325,13 @@
   window.addEventListener?.("codey:config-changed", configChangeHandler);
   resizeHandler = scheduleSync;
   window.addEventListener?.("resize", resizeHandler, { passive: true });
-  const mutationTouchesAppearanceMount = (mutation) => {
-    const target = mutation?.target;
-    if (target instanceof Element
-      && (target.matches("header, nav") || target.closest("header, nav"))) return true;
-    for (const node of [
-      ...(mutation?.addedNodes || []),
-      ...(mutation?.removedNodes || []),
-    ]) {
-      if (!(node instanceof Element)) continue;
-      if (node.matches("header, nav, button[aria-label='Share'], button[aria-label='分享']")
-        || node.querySelector?.("header, nav, button[aria-label='Share'], button[aria-label='分享']")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   if (document.documentElement && typeof MutationObserver === "function") {
-    mutationObserver = new MutationObserver((mutations) => {
-      if (mutations.some(mutationTouchesAppearanceMount)) {
-        scheduleAppearanceButtonSync();
-      }
+    mutationObserver = new MutationObserver(() => {
       if (!observedRegion?.isConnected || !observedToolbar?.isConnected) scheduleSync();
     });
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   apply(settings);
-  ensureAppearanceButton();
   for (const delay of [100, 500, 1500, 3000]) scheduleDelayedSync(delay);
 })();
