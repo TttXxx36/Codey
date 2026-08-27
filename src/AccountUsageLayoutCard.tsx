@@ -4,7 +4,6 @@ import type { AccountUsageLayoutConfig, Config } from "./App.types";
 import {
   ActionGroup,
   Button,
-  FieldRow,
   SectionHeader,
   StatusChip,
   Surface,
@@ -24,7 +23,7 @@ const MODE_OPTIONS: Array<{
   {
     value: "fixed",
     title: "固定在左下角",
-    description: "保持现在的侧栏底部位置，不随聊天内容滚动。",
+    description: "保持现在的侧边栏底部位置，不随会话内容滚动。",
   },
   {
     value: "free",
@@ -84,7 +83,10 @@ export function AccountUsageLayoutCard({
       />
 
       <Surface className="account-usage-layout-card">
-        <FieldRow label="显示位置">
+        <div className="codey-field-row account-usage-position-field">
+          <div className="codey-field-row-heading">
+            <span>显示位置</span>
+          </div>
           <div className="account-usage-mode-grid" role="radiogroup" aria-label="额度面板显示位置">
             {MODE_OPTIONS.map((option) => (
               <label
@@ -99,14 +101,14 @@ export function AccountUsageLayoutCard({
                   disabled={isBusy}
                   onChange={() => updateLayout({ mode: option.value })}
                 />
-                <span>
+                <span className="account-usage-mode-copy">
                   <strong>{option.title}</strong>
                   <small>{option.description}</small>
                 </span>
               </label>
             ))}
           </div>
-        </FieldRow>
+        </div>
 
         <ActionGroup className="account-usage-layout-actions">
           <Button

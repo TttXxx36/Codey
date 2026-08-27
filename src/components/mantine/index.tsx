@@ -908,6 +908,7 @@ export interface FieldRowProps
   extends React.LabelHTMLAttributes<HTMLLabelElement> {
   label: React.ReactNode;
   value?: React.ReactNode;
+  description?: React.ReactNode;
 }
 
 export function FieldRow({
@@ -915,6 +916,7 @@ export function FieldRow({
   className,
   label,
   value,
+  description,
   ...props
 }: FieldRowProps) {
   return (
@@ -923,6 +925,9 @@ export function FieldRow({
         <span>{label}</span>
         {value != null ? <output>{value}</output> : null}
       </span>
+      {description ? (
+        <small className="codey-field-row-description">{description}</small>
+      ) : null}
       {children}
     </label>
   );

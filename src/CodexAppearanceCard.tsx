@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent, type CSSProperties } from "react";
 import {
   IconAdjustmentsHorizontal,
   IconPhoto,
@@ -25,6 +25,11 @@ const DEFAULT_APPEARANCE: CodexAppearanceConfig = {
 
 const MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 2400;
+
+function rangeProgress(value: number, min: number, max: number) {
+  const ratio = (value - min) / (max - min);
+  return String(Math.round(Math.min(1, Math.max(0, ratio)) * 100)) + "%";
+}
 
 function imageFileToDataUrl(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) {
@@ -150,22 +155,25 @@ export function CodexAppearanceCard({
               </span>
             )}
           </div>
-          <div
-            className="codex-appearance-preview-shell"
-            aria-label="当前 Codex 背景预览"
-          >
-            {appearance.backgroundDataUrl ? (
-              <img
-                className="codex-appearance-preview"
-                src={appearance.backgroundDataUrl}
-                alt="当前 Codex 背景预览"
-              />
-            ) : (
-              <div className="codex-appearance-preview-empty">
-                <IconPhoto aria-hidden="true" size={18} />
-                <span>未设置背景</span>
-              </div>
-            )}
+          <div className="codex-appearance-preview-panel">
+            <span className="codex-appearance-preview-label">当前背景预览</span>
+            <div
+              className="codex-appearance-preview-shell"
+              aria-label="当前 Codex 背景预览"
+            >
+              {appearance.backgroundDataUrl ? (
+                <img
+                  className="codex-appearance-preview"
+                  src={appearance.backgroundDataUrl}
+                  alt="当前 Codex 背景预览"
+                />
+              ) : (
+                <div className="codex-appearance-preview-empty">
+                  <IconPhoto aria-hidden="true" size={18} />
+                  <span>未设置背景</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -210,6 +218,7 @@ export function CodexAppearanceCard({
             className="codex-appearance-control"
             label="背景显示强度"
             value={appearance.backgroundOpacity + "%"}
+            description="调节背景图片的可见程度，数值越高越突出。"
           >
             <input
               type="range"
@@ -217,6 +226,13 @@ export function CodexAppearanceCard({
               max="100"
               step="1"
               value={appearance.backgroundOpacity}
+              style={{
+                "--codey-range-progress": rangeProgress(
+                  appearance.backgroundOpacity,
+                  0,
+                  100,
+                ),
+              } as CSSProperties}
               disabled={isBusy}
               onChange={(event) =>
                 updateAppearance({ backgroundOpacity: Number(event.target.value) })
@@ -227,6 +243,7 @@ export function CodexAppearanceCard({
             className="codex-appearance-control"
             label="界面遮罩强度"
             value={appearance.surfaceOpacity + "%"}
+            description="增加遮罩可提升文字可读性，数值越高越稳重。"
           >
             <input
               type="range"
@@ -234,6 +251,13 @@ export function CodexAppearanceCard({
               max="80"
               step="1"
               value={appearance.surfaceOpacity}
+              style={{
+                "--codey-range-progress": rangeProgress(
+                  appearance.surfaceOpacity,
+                  0,
+                  80,
+                ),
+              } as CSSProperties}
               disabled={isBusy}
               onChange={(event) =>
                 updateAppearance({ surfaceOpacity: Number(event.target.value) })
@@ -244,6 +268,7 @@ export function CodexAppearanceCard({
             className="codex-appearance-control"
             label="对话内容宽度"
             value={appearance.chatWidth + "px"}
+            description="限制中央对话正文的最大宽度，不影响左侧会话栏。"
           >
             <input
               type="range"
@@ -251,6 +276,13 @@ export function CodexAppearanceCard({
               max="1800"
               step="10"
               value={appearance.chatWidth}
+              style={{
+                "--codey-range-progress": rangeProgress(
+                  appearance.chatWidth,
+                  800,
+                  1800,
+                ),
+              } as CSSProperties}
               disabled={isBusy}
               onChange={(event) =>
                 updateAppearance({ chatWidth: Number(event.target.value) })
