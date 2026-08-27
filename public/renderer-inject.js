@@ -135,7 +135,9 @@
       #${accountUsageId} .codey-usage-header { display: flex; min-width: 0; align-items: center; gap: 8px; padding-bottom: 7px; }
       #${accountUsageId} .codey-usage-plan-tag { flex: 0 0 auto; overflow: hidden; max-width: 48%; border: 1px solid color-mix(in srgb, #0a84ff 32%, transparent); border-radius: 4px; padding: 0 4px; background: color-mix(in srgb, #0a84ff 13%, transparent); color: color-mix(in srgb, #0a84ff 82%, CanvasText); font-size: 8px; font-weight: 700; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
       #${accountUsageId} .codey-usage-plan-caption { min-width: 0; overflow: hidden; color: color-mix(in srgb, CanvasText 52%, transparent); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-      #${accountUsageId} .codey-usage-drag-handle { display: none; min-width: 0; margin-inline-start: auto; border: 0; padding: 0; background: transparent; color: color-mix(in srgb, CanvasText 58%, transparent); font: inherit; font-size: 9px; cursor: grab; }
+      #${accountUsageId} .codey-usage-drag-handle { display: none; min-width: 22px; min-height: 20px; align-items: center; justify-content: center; margin-inline-start: auto; border: 0; padding: 2px 3px; background: transparent; color: color-mix(in srgb, CanvasText 58%, transparent); font: inherit; cursor: grab; }
+      #${accountUsageId} .codey-usage-drag-glyph { display: grid; grid-template-columns: repeat(2, 3px); grid-template-rows: repeat(3, 3px); gap: 2px; width: 8px; height: 13px; place-content: center; }
+      #${accountUsageId} .codey-usage-drag-glyph > span { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
       #${accountUsageId}[data-layout-mode="free"] .codey-usage-drag-handle { display: inline-flex; align-items: center; gap: 5px; }
       #${accountUsageId}[data-layout-mode="free"][data-dragging="true"] .codey-usage-drag-handle { cursor: grabbing; }
       #${accountUsageId} .codey-usage-list { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 7px; }
@@ -545,7 +547,7 @@
   const accountUsageHeaderMarkup = (result) => {
     const plan = accountUsagePlanLabel(result?.planType);
     const dragHandle = accountUsageLayout.mode === "free"
-      ? '<button type="button" class="codey-usage-drag-handle" aria-label="拖动额度卡片"><span>拖动</span><span aria-hidden="true">⋮⋮</span></button>'
+      ? '<button type="button" class="codey-usage-drag-handle" aria-label="拖动额度卡片"><span class="codey-usage-drag-glyph" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></span></button>'
       : "";
     if (!plan && !dragHandle) return "";
     return `
@@ -638,6 +640,58 @@
     return computed?.display === "none" || computed?.visibility === "hidden" ? null : rect;
   };
 
+  const accountUsageConversationBounds = ({
+    regionRect,
+    toolbarRect,
+    viewportWidth,
+    viewportHeight,
+  }) => {
+    const safeWidth = Math.max(320, Number(viewportWidth) || 320);
+    const safeHeight = Math.max(240, Number(viewportHeight) || 240);
+    const regionLeft = Number(regionRect?.left);
+    const regionTop = Number(regionRect?.top);
+    const regionWidth = Number(regionRect?.width);
+    const regionHeight = Number(regionRect?.height);
+    const regionRight = Number.isFinite(Number(regionRect?.right))
+      ? Number(regionRect.right)
+      : regionLeft + regionWidth;
+    const regionBottom = Number.isFinite(Number(regionRect?.bottom))
+      ? Number(regionRect.bottom)
+      : regionTop + regionHeight;
+    const toolbarBottom = Number(toolbarRect?.bottom);
+    if (
+      !Number.isFinite(regionLeft)
+      || !Number.isFinite(regionTop)
+      || !Number.isFinite(regionWidth)
+      || !Number.isFinite(regionHeight)
+      || regionWidth <= 0
+      || regionHeight <= 0
+    ) {
+      const top = Number.isFinite(toolbarBottom)
+        ? Math.max(0, Math.min(safeHeight, toolbarBottom))
+        : 0;
+      return {
+        left: 0,
+        right: safeWidth,
+        top,
+        bottom: safeHeight,
+        width: safeWidth,
+        height: Math.max(0, safeHeight - top),
+      };
+    }
+    const left = Math.max(0, Math.min(safeWidth, regionLeft));
+    const right = Math.max(left, Math.min(safeWidth, regionRight));
+    const top = Math.max(
+      0,
+      Math.min(safeHeight, regionTop),
+      Number.isFinite(toolbarBottom)
+        ? Math.min(safeHeight, toolbarBottom)
+        : 0,
+    );
+    const bottom = Math.max(top, Math.min(safeHeight, regionBottom));
+    return { left, right, top, bottom, width: right - left, height: bottom - top };
+  };
+
   const accountUsageViewportRect = () => {
     const documentRect = document.documentElement?.getBoundingClientRect?.();
     const viewportWidth = Math.max(
@@ -652,28 +706,29 @@
       Number(documentRect?.height) || 0,
       240,
     );
-    const contentSelectors = [".thread-scroll-container", "main", "[role=main]"];
+    const contentSelectors = [
+      "#root .thread-scroll-container",
+      "#root ._MainContentSurface_1k2yc_2",
+      "#root main",
+      "#root [role=main]",
+    ];
     const contentRect = contentSelectors
       .flatMap((selector) => Array.from(document.querySelectorAll?.(selector) || []))
       .map(accountUsageElementRect)
       .find(Boolean);
-    let left = Math.max(12, Number(contentRect?.left) || 12);
-    let right = Math.min(viewportWidth - 12, Number(contentRect?.right) || viewportWidth - 12);
-    if (right - left < 180) {
-      left = 12;
-      right = viewportWidth - 12;
-    }
-    const composerRect = ["form", "textarea", "[contenteditable=true]"]
+    const toolbarRect = [
+      "#root .top-toolbar-sm",
+      "#root [class~='top-toolbar-sm']",
+    ]
       .flatMap((selector) => Array.from(document.querySelectorAll?.(selector) || []))
       .map(accountUsageElementRect)
-      .filter((rect) => rect && rect.bottom >= viewportHeight - 96 && rect.width >= 280)
-      .sort((a, b) => a.top - b.top)[0] || null;
-    const top = Math.max(12, Number(contentRect?.top) || 12);
-    const bottomCandidate = composerRect
-      ? Number(composerRect.top) - 12
-      : viewportHeight - 12;
-    const bottom = Math.max(top + 120, Math.min(viewportHeight - 12, bottomCandidate));
-    return { left, right, top, bottom, width: right - left, height: bottom - top };
+      .find(Boolean);
+    return accountUsageConversationBounds({
+      regionRect: contentRect,
+      toolbarRect,
+      viewportWidth,
+      viewportHeight,
+    });
   };
 
   const applyAccountUsageLayout = (usage = document.getElementById(accountUsageId)) => {

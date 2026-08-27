@@ -17,6 +17,8 @@
   --codey-color-surface-subtle: #fbfbfd;
   --codey-color-surface-muted: #f2f2f7;
   --codey-color-surface-secondary: #ebebef;
+  --codey-color-control-track: #d8d8de;
+  --codey-color-control-fill: var(--codey-color-accent);
   --codey-color-surface-accent: rgba(0, 122, 255, 0.03);
   --codey-color-accent-muted: #e5e5ea;
   --codey-color-border: rgba(0, 0, 0, 0.08);
@@ -33,6 +35,8 @@
   --codey-color-accent: #007aff;
   --codey-color-accent-hover: #0068d9;
   --codey-color-accent-bg: rgba(0, 122, 255, 0.09);
+  --codey-color-accent-border: rgba(0, 122, 255, 0.28);
+  --codey-color-accent-border-strong: rgba(0, 122, 255, 0.38);
   --codey-color-success: #34c759;
   --codey-color-success-strong: #248a3d;
   --codey-color-success-bg: rgba(52, 199, 89, 0.1);
@@ -536,4 +540,12 @@ input:focus-visible,
 .codey-field-row-heading output {
   color: var(--codey-color-accent);
   font-variant-numeric: tabular-nums;
+}
+
+.codey-field-row-description {
+  margin: 0;
+  color: var(--codey-color-text-tertiary);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
 }
