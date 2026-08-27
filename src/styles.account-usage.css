@@ -1,0 +1,79 @@
+.account-usage-layout-card {
+  display: grid;
+  gap: var(--codey-space-4);
+}
+
+.account-usage-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--codey-space-3);
+}
+
+.account-usage-mode-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--codey-space-3);
+  min-width: 0;
+  border: 1px solid var(--codey-color-border);
+  border-radius: var(--codey-radius-lg);
+  padding: var(--codey-space-3);
+  background: var(--codey-color-surface-subtle);
+  color: var(--codey-color-text-secondary-strong);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.account-usage-mode-option:hover {
+  border-color: var(--codey-color-border-hover);
+  box-shadow: var(--codey-shadow-surface);
+}
+
+.account-usage-mode-option.selected {
+  border-color: var(--codey-color-accent);
+  background: var(--codey-color-accent-bg);
+  color: var(--codey-color-text-primary);
+  box-shadow: 0 0 0 3px var(--codey-focus-ring);
+}
+
+.account-usage-mode-option input {
+  margin: 3px 0 0;
+  accent-color: var(--codey-color-accent);
+}
+
+.account-usage-mode-option span {
+  display: grid;
+  gap: var(--codey-space-1);
+  min-width: 0;
+}
+
+.account-usage-mode-option strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.account-usage-mode-option small,
+.account-usage-layout-actions small {
+  color: var(--codey-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.account-usage-layout-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 760px) {
+  .account-usage-mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .account-usage-layout-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

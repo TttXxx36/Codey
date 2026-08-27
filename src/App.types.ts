@@ -33,6 +33,14 @@ export type CodexAppearanceConfig = {
   chatWidth: number;
 };
 
+export type AccountUsageLayoutConfig = {
+  mode: "fixed" | "free";
+  /** Normalized horizontal anchor in the main conversation viewport (0..10000). */
+  anchorX: number;
+  /** Normalized vertical anchor in the main conversation viewport (0..10000). */
+  anchorY: number;
+};
+
 export type SubagentRoleId =
   | "codey_quick_scan"
   | "codey_deep_research"
@@ -56,6 +64,7 @@ export type Config = {
   codexAppPath: string;
   userScripts: string[];
   codexAppearance?: CodexAppearanceConfig;
+  accountUsageLayout?: AccountUsageLayoutConfig;
   selectedModelsByProvider: Record<string, string[]>;
   manualThirdPartyModelsByProvider: Record<string, string[]>;
   declaredOfficialModelsByProvider: Record<string, string[]>;

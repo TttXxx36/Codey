@@ -318,7 +318,7 @@ test("a backend-pushed catalog updates immediately without a nested bridge reque
   const { patch } = runtime;
   const eventsBeforePush = client.events.length;
 
-  assert.equal(patch.version, "14");
+  assert.equal(patch.version, "15");
   assert.equal(await patch.setCatalog({
     status: "ok",
     models: ["gpt-5.6-sol", "provider-hot-pushed"],
@@ -684,9 +684,9 @@ test("official account route models keep raw ids and dispatch to the OpenAI prov
 
   assert.equal(
     queryClient.model("gpt-5.6-sol").displayName,
-    "OpenAI 官方直登 / gpt-5.6-sol",
+    "GPT-5.6 Sol",
   );
-  assert.equal(queryClient.model("gpt-5.6-sol").routeName, "OpenAI 官方直登");
+  assert.equal(queryClient.model("gpt-5.6-sol").routeName, "");
 
   const request = {
     detail: {

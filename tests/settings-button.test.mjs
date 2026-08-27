@@ -9,6 +9,13 @@ const source = readFileSync(new URL("../public/renderer-inject.js", import.meta.
 const bridgeSource = readFileSync(new URL("../public/codey-bridge.js", import.meta.url), "utf8");
 
 const runRenderer = (sandbox) => {
+  if (!sandbox.__CODEY_ACCOUNT_USAGE_LAYOUT__) {
+    sandbox.__CODEY_ACCOUNT_USAGE_LAYOUT__ = {
+      mode: "fixed",
+      anchorX: 0,
+      anchorY: 10000,
+    };
+  }
   const context = vm.createContext(sandbox);
   vm.runInContext(bridgeSource, context);
   vm.runInContext(source, context);
@@ -135,7 +142,7 @@ test("moves the Codey button beside the visible header's trailing action region"
   assert.deepEqual(visibleHeader.children, [codeyButton, rightRegion]);
 });
 
-test("renders weekly and optional five-hour usage above the sidebar account", async () => {
+test("renders five-hour and weekly usage above the sidebar account", async () => {
   const visibleHeader = new FakeElement("header", { right: 1200 });
   const sessionTitle = new FakeElement("div", { right: 700, width: 240 });
   sessionTitle.textContent = "当前会话";
@@ -323,13 +330,13 @@ test("renders weekly and optional five-hour usage above the sidebar account", as
   assert.equal(visibleHeader.children[0], sessionTitle);
   assert.equal(visibleHeader.getAttribute("data-codey-usage-host"), null);
   assert.match(usage.innerHTML, /class="codey-usage-list"/);
-  assert.match(usage.innerHTML, /周额度[\s\S]*?60%[\s\S]*?5 小时[\s\S]*?85%/);
-  assert.match(usage.innerHTML, /data-window="weekly" data-tone="normal"/);
+  assert.match(usage.innerHTML, /5 小时额度[\s\S]*?85%[\s\S]*?周额度[\s\S]*?60%/);
   assert.match(usage.innerHTML, /data-window="five-hour" data-tone="healthy"/);
+  assert.match(usage.innerHTML, /data-window="weekly" data-tone="normal"/);
   assert.match(usage.innerHTML, /今天 \d{2}:\d{2} 重置/);
   assert.match(usage.innerHTML, /明天 \d{2}:\d{2} 重置/);
   const summaryHtml = usage.innerHTML.split('class="codey-usage-details"')[0];
-  assert.match(summaryHtml, /class="codey-usage-plan-tag">Pro 20x<\/span>[\s\S]*?周额度[\s\S]*?60%/);
+  assert.match(summaryHtml, /class="codey-usage-plan-tag">Pro 20x<\/span>[\s\S]*?5 小时额度[\s\S]*?85%/);
   assert.doesNotMatch(summaryHtml, /余额|42/);
   assert.match(usage.innerHTML, /class="codey-usage-details" role="tooltip"/);
   assert.doesNotMatch(usage.innerHTML, /codey-usage-details-plan/);
@@ -350,8 +357,8 @@ test("renders weekly and optional five-hour usage above the sidebar account", as
     secondary: { ...accountUsageResult.secondary, usedPercent: 85 },
   };
   await window.__codeyRefreshAccountUsage();
-  assert.match(usage.innerHTML, /data-window="weekly" data-tone="critical"[\s\S]*?15%/);
   assert.match(usage.innerHTML, /data-window="five-hour" data-tone="warning"[\s\S]*?35%/);
+  assert.match(usage.innerHTML, /data-window="weekly" data-tone="critical"[\s\S]*?15%/);
 
   accountUsageResult = {
     ...accountUsageResult,
@@ -397,6 +404,81 @@ test("renders weekly and optional five-hour usage above the sidebar account", as
   assert.match(remountedSummaryHtml, /class="codey-usage-plan-tag">Plus<\/span>/);
 });
 
+
+test("mounts free quota layout in the main viewport with 5-hour usage first", async () => {
+  const documentElement = new FakeElement("html", { right: 1400, width: 1400, height: 900 });
+  const body = new FakeElement("body", { right: 1400, width: 1400, height: 900 });
+  const main = new FakeElement("main", { right: 1380, width: 1120, height: 760, top: 48 });
+  const composer = new FakeElement("form", { right: 1380, width: 760, height: 104, top: 760 });
+  body.appendChild(main);
+  body.appendChild(composer);
+  documentElement.appendChild(body);
+
+  const findById = (id) => {
+    let result = null;
+    const visit = (element) => {
+      if (result) return;
+      if (element.id === id) { result = element; return; }
+      element.children.forEach(visit);
+    };
+    visit(documentElement);
+    return result;
+  };
+  const document = {
+    body, documentElement, visibilityState: "visible",
+    createElement: (tagName) => new FakeElement(tagName),
+    getElementById: findById,
+    querySelector: (selector) => document.querySelectorAll(selector)[0] || null,
+    querySelectorAll: (selector) => documentElement.querySelectorAll(selector),
+  };
+  const windowListeners = new Map();
+  const addWindowListener = (type, handler) => {
+    const handlers = windowListeners.get(type) || [];
+    handlers.push(handler);
+    windowListeners.set(type, handlers);
+  };
+  const window = {
+    __codexSessionDeleteBridge: async (path, payload) => {
+      if (path === "/account/usage") return {
+        status: "ok", planType: "plus",
+        primary: { usedPercent: 20, windowMinutes: 300 },
+        secondary: { usedPercent: 40, windowMinutes: 10080 },
+      };
+      if (path === "/settings/get") return { settingsRevision: 1, accountUsageLayout: { mode: "free", anchorX: 5000, anchorY: 6000 } };
+      if (path === "/backend/status") return { status: "ok", availableUpdate: null };
+      if (path === "/backend/health") return { status: "ok" };
+      if (path === "/api/save_codey_config") return { status: "ok", config: payload.config };
+      throw new Error(`unexpected bridge path: ${path}`);
+    },
+    addEventListener: addWindowListener,
+    clearTimeout() {}, dispatchEvent() {},
+    getComputedStyle: () => ({ display: "flex", visibility: "visible" }),
+    innerHeight: 900, innerWidth: 1400,
+    localStorage: { getItem: () => null, key: () => null, length: 0, setItem() {} },
+    setTimeout: () => 1,
+  };
+  window.window = window;
+
+  runRenderer({
+    console, document, HTMLElement: FakeElement,
+    __CODEY_ACCOUNT_USAGE_LAYOUT__: { mode: "free", anchorX: 5000, anchorY: 6000 },
+    location: { pathname: "/", search: "" },
+    MutationObserver: class { observe() {} },
+    URLSearchParams, window,
+  });
+
+  await window.__codeyRefreshAccountUsage();
+  const usage = findById("codey-account-usage");
+  const style = findById("codey-core-injected-style");
+  assert.ok(usage);
+  assert.equal(usage.parentElement, body);
+  assert.equal(body.getAttribute("data-codey-usage-host"), "free");
+  assert.equal(usage.dataset.layoutMode, "free");
+  assert.equal(usage.style.position, "fixed");
+  assert.match(style.textContent, /data-layout-mode="free"/);
+  assert.match(usage.innerHTML, /5 小时额度[\s\S]*?周额度/);
+  assert.match(usage.innerHTML, /class="codey-usage-drag-handle"/);
+});
 const createStartupUpdateFixture = (bridge) => {
   const visibleHeader = new FakeElement("header", { right: 1200 });
   const documentElement = new FakeElement("html");
