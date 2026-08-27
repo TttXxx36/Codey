@@ -10,7 +10,7 @@ const rendererSource = readFileSync(
 
 function extractAccountUsageBounds() {
   const match = rendererSource.match(
-    /  const accountUsageConversationBounds = (\(\{[\s\S]*?\n  \};)\n\n  const accountUsageViewportRect/,
+    /  const accountUsageConversationBounds = (\(\{[\s\S]*?\r?\n  \};)\r?\n\r?\n  const accountUsageViewportRect/,
   );
   assert.ok(match, "the account usage bounds helper must remain a testable pure function");
   return runInNewContext(match[1].replace(/;\\s*$/, ""));
