@@ -357,8 +357,8 @@ test("renders five-hour and weekly usage above the sidebar account", async () =>
     secondary: { ...accountUsageResult.secondary, usedPercent: 85 },
   };
   await window.__codeyRefreshAccountUsage();
-  assert.match(usage.innerHTML, /data-window="five-hour" data-tone="critical"[\s\S]*?15%/);
-  assert.match(usage.innerHTML, /data-window="weekly" data-tone="warning"[\s\S]*?35%/);
+  assert.match(usage.innerHTML, /data-window="five-hour" data-tone="warning"[\s\S]*?35%/);
+  assert.match(usage.innerHTML, /data-window="weekly" data-tone="critical"[\s\S]*?15%/);
 
   accountUsageResult = {
     ...accountUsageResult,
@@ -472,7 +472,7 @@ test("mounts free quota layout in the main viewport with 5-hour usage first", as
   const style = findById("codey-core-injected-style");
   assert.ok(usage);
   assert.equal(usage.parentElement, body);
-  assert.equal(usage.getAttribute("data-codey-usage-host"), "free");
+  assert.equal(body.getAttribute("data-codey-usage-host"), "free");
   assert.equal(usage.dataset.layoutMode, "free");
   assert.equal(usage.style.position, "fixed");
   assert.match(style.textContent, /data-layout-mode="free"/);
