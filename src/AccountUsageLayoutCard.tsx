@@ -1,7 +1,6 @@
 import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 
 import type { AccountUsageLayoutConfig, Config } from "./App.types";
-import { IconAdjustmentsHorizontal } from "@tabler/icons-react";
 import {
   ActionGroup,
   Button,

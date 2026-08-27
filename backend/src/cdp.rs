@@ -215,6 +215,7 @@ pub fn prepare_injection_scripts(
     )
 }
 
+#[allow(dead_code)]
 pub fn prepare_injection_scripts_with_appearance(
     slim_codex_pet: bool,
     hide_full_access_warning: bool,
