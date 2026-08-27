@@ -211,7 +211,6 @@
     }
 
     const style = ensureStyle();
-    const threadSurfaceOpacity = Math.max(0, next.surfaceOpacity - 12);
     style.textContent = `
       :root, .thread-scroll-container {
         --thread-content-max-width: ${next.chatWidth}px !important;
@@ -240,9 +239,9 @@
         html[data-codey-appearance-active="true"] #root main {
           background-color: color-mix(in srgb, Canvas ${next.surfaceOpacity}%, transparent) !important;
         }
+        /* Background is visual-only; keep Codex native composer positioning untouched. */
         html[data-codey-appearance-active="true"] #root .thread-scroll-container {
-          position: relative !important;
-          background-color: color-mix(in srgb, Canvas ${threadSurfaceOpacity}%, transparent) !important;
+          background-color: transparent !important;
         }
       ` : ""}
     `;

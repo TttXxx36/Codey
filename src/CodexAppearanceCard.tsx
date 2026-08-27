@@ -127,7 +127,15 @@ export function CodexAppearanceCard({
       <Surface className="codex-appearance-card">
         <div className="codex-appearance-background-row">
           <div className="codex-appearance-copy">
-            <strong>背景图片</strong>
+            <div className="codex-appearance-field-heading">
+              <strong>背景图片</strong>
+              <StatusChip
+                size="xs"
+                tone={appearance.backgroundDataUrl ? "success" : "secondary"}
+              >
+                {appearance.backgroundDataUrl ? "已设置" : "未设置"}
+              </StatusChip>
+            </div>
             <small>
               只显示在 Codex 中央聊天/内容区域，自动避开左侧会话栏和顶部工具栏。
             </small>
@@ -136,51 +144,66 @@ export function CodexAppearanceCard({
                 {appearance.backgroundFileName}
               </span>
             )}
-            {fileError && <span className="codex-appearance-error">{fileError}</span>}
+            {fileError && (
+              <span className="codex-appearance-error" role="alert">
+                {fileError}
+              </span>
+            )}
           </div>
-          <ActionGroup className="codex-appearance-background-actions">
-            {appearance.backgroundDataUrl && (
+          <div
+            className="codex-appearance-preview-shell"
+            aria-label="当前 Codex 背景预览"
+          >
+            {appearance.backgroundDataUrl ? (
               <img
                 className="codex-appearance-preview"
                 src={appearance.backgroundDataUrl}
                 alt="当前 Codex 背景预览"
               />
+            ) : (
+              <div className="codex-appearance-preview-empty">
+                <IconPhoto aria-hidden="true" size={18} />
+                <span>未设置背景</span>
+              </div>
             )}
-            <input
-              ref={fileInputRef}
-              className="sr-only"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              disabled={isBusy}
-            />
-            <Button
-              disabled={isBusy}
-              onClick={() => fileInputRef.current?.click()}
-              size="sm"
-              variant="outline"
-            >
-              <IconPhoto aria-hidden="true" />
-              选择图片
-            </Button>
-            {appearance.backgroundDataUrl && (
-              <Button
-                aria-label="移除 Codex 背景图片"
-                disabled={isBusy}
-                onClick={() =>
-                  updateAppearance({
-                    backgroundDataUrl: "",
-                    backgroundFileName: "",
-                  })
-                }
-                size="icon-sm"
-                variant="ghost"
-              >
-                <IconTrash aria-hidden="true" />
-              </Button>
-            )}
-          </ActionGroup>
+          </div>
         </div>
+
+        <ActionGroup className="codex-appearance-background-actions">
+          <input
+            ref={fileInputRef}
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            disabled={isBusy}
+          />
+          <Button
+            disabled={isBusy}
+            onClick={() => fileInputRef.current?.click()}
+            size="sm"
+            variant="outline"
+          >
+            <IconPhoto aria-hidden="true" size={15} />
+            选择图片
+          </Button>
+          {appearance.backgroundDataUrl && (
+            <Button
+              aria-label="移除 Codex 背景图片"
+              disabled={isBusy}
+              onClick={() =>
+                updateAppearance({
+                  backgroundDataUrl: "",
+                  backgroundFileName: "",
+                })
+              }
+              size="icon-sm"
+              variant="ghost"
+            >
+              <IconTrash aria-hidden="true" size={15} />
+            </Button>
+          )}
+        </ActionGroup>
 
         <div className="codex-appearance-controls">
           <FieldRow
