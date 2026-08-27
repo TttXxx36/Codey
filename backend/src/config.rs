@@ -296,7 +296,6 @@ impl CodexAppearanceConfig {
     }
 }
 
-
 /// Positioning preferences for the account quota panel injected into Codex.
 /// Anchors are normalized to 0..=10000 relative to the main conversation viewport.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -2112,11 +2111,9 @@ mod tests {
 
     #[test]
     fn account_usage_layout_defaults_to_fixed_bottom_left_for_existing_configs() {
-        let config = serde_json::from_str::<CodeyConfig>(
-            r#"{"activeProfileId":"","profiles":[]}"#,
-        )
-        .unwrap()
-        .normalize();
+        let config = serde_json::from_str::<CodeyConfig>(r#"{"activeProfileId":"","profiles":[]}"#)
+            .unwrap()
+            .normalize();
 
         assert_eq!(config.account_usage_layout.mode, "fixed");
         assert_eq!(config.account_usage_layout.anchor_x, 0);

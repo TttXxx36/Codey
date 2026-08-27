@@ -560,7 +560,12 @@ fn prepare_injection_scripts_for_platform_with_appearance(
                     .to_string(),
             ),
         };
-        let prepared = prepare_script(CODEX_APPEARANCE_SCRIPT, slim_codex_pet, Some(appearance), None);
+        let prepared = prepare_script(
+            CODEX_APPEARANCE_SCRIPT,
+            slim_codex_pet,
+            Some(appearance),
+            None,
+        );
         append_guarded_script(&mut core_bundle, &descriptor, prepared.as_ref());
         descriptors.push(descriptor);
     }
