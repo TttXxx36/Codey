@@ -31,7 +31,7 @@ test("free quota bounds match the background conversation rectangle", () => {
     viewportHeight: 1200,
   });
 
-  assert.deepEqual(bounds, {
+  assert.deepEqual({ ...bounds }, {
     left: 280,
     right: 1680,
     top: 96,
