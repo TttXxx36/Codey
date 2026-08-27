@@ -15,6 +15,9 @@ test("Codex appearance keeps the image inside the conversation surface", () => {
   assert.doesNotMatch(appearanceSource, /appearanceMountDirty|scheduleAppearanceButtonSync|mutationTouchesAppearanceMount/);
   assert.match(appearanceSource, /__CODEY_CODEX_APPEARANCE_SETTINGS__/);
   assert.match(appearanceSource, /#root \.thread-scroll-container/);
+  assert.match(appearanceSource, /Background is visual-only/);
+  assert.match(appearanceSource, /#root \.thread-scroll-container \{\s*background-color: transparent/);
+  assert.doesNotMatch(appearanceSource, /#root \.thread-scroll-container \{\s*position: relative/);
   assert.match(appearanceSource, /#root \.\_MainContentSurface_1k2yc_2/);
   assert.match(appearanceSource, /function isConversationSurface\(candidate\)/);
   assert.match(appearanceSource, /data-codey-appearance-active/);
