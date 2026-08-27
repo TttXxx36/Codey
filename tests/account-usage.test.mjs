@@ -13,7 +13,7 @@ function extractAccountUsageBounds() {
     /  const accountUsageConversationBounds = (\(\{[\s\S]*?\n  \};)\n\n  const accountUsageViewportRect/,
   );
   assert.ok(match, "the account usage bounds helper must remain a testable pure function");
-  return runInNewContext(`(${match[1]})`);
+  return runInNewContext(match[1].replace(/;\\s*$/, ""));
 }
 
 test("free quota bounds match the background conversation rectangle", () => {
