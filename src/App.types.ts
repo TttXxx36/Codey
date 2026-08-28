@@ -28,7 +28,7 @@ export type PromptOptimizationConfig = {
 export type CodexAppearanceConfig = {
   /** Whether Codey's appearance layer is applied to the Codex page. */
   enabled?: boolean;
-  backgroundDataUrl: string,
+  backgroundDataUrl: string;
   backgroundFileName: string;
   backgroundOpacity: number;
   surfaceOpacity: number;
