@@ -32,7 +32,7 @@ use diagnostics::{
 };
 pub use models::{
     activate_route, delete_route, fetch_current_provider_models, fetch_route_models,
-    save_default_model, save_official_route_models, save_official_route_models_with_options,
+    save_default_model, save_official_route_models_with_options,
     save_route, save_selected_models, sync_current_provider_command,
 };
 #[cfg(test)]

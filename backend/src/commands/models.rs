@@ -1152,14 +1152,6 @@ pub async fn save_default_model(
     })))
 }
 
-pub async fn save_official_route_models(
-    state: &Arc<AppState>,
-    route_id: String,
-    requested_models: Vec<String>,
-) -> Result<Value, String> {
-    save_official_route_models_with_options(state, route_id, requested_models, None, None).await
-}
-
 pub async fn save_official_route_models_with_options(
     state: &Arc<AppState>,
     route_id: String,
