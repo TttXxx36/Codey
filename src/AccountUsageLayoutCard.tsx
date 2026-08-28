@@ -5,7 +5,6 @@ import {
   ActionGroup,
   Button,
   SectionHeader,
-  StatusChip,
   Surface,
   Switch,
 } from "./components/mantine";
@@ -28,8 +27,8 @@ const MODE_OPTIONS: Array<{
   },
   {
     value: "free",
-    title: "自由拖动",
-    description: "拖动面板标题即可移动，位置会限制在中央内容区域内并自动记忆。",
+    title: "自由移动",
+    description: "根据配置和屏幕空间，位置会跟随焦点内容区域自动记忆。",
   },
 ];
 
@@ -75,7 +74,7 @@ export function AccountUsageLayoutCard({
         id="account-usage-layout-title"
         icon={<IconAdjustmentsHorizontal size={15} />}
         title="额度显示"
-        description="管理 Plus 5 小时额度和周额度在 Codex 中的显示方式。"
+        description="管理 Codex 额度信息的显示方式。"
         action={
           <Switch
             checked={config.showAccountUsageInHeader !== false}
@@ -85,11 +84,6 @@ export function AccountUsageLayoutCard({
             }
             aria-label="显示 Codex 额度信息"
           />
-        }
-        status={
-          <StatusChip tone={layout.mode === "free" ? "info" : "secondary"}>
-            {layout.mode === "free" ? "自由拖动" : "固定左下角"}
-          </StatusChip>
         }
       />
 
@@ -136,11 +130,6 @@ export function AccountUsageLayoutCard({
           >
             恢复左下角位置
           </Button>
-          <small>
-            {layout.mode === "free"
-              ? "在 Codex 中拖动“额度”标题即可调整位置。"
-              : "固定模式会保留原有左下角布局。"}
-          </small>
         </ActionGroup>
       </Surface>
     </section>

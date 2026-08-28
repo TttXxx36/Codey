@@ -1,0 +1,151 @@
+/*
+ * Settings-page-only layout and visual alignment.
+ * FeaturePolicyCard deliberately remains outside these selectors.
+ */
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.settings-grid > .secondary-section {
+  display: flex;
+  min-width: 0;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.settings-grid > .secondary-section > .section-title {
+  min-height: 52px;
+  margin-bottom: 0;
+  padding: 0 2px;
+  align-items: center;
+}
+
+.settings-grid > .secondary-section > .section-title h2 {
+  font-size: 16px;
+}
+
+.settings-grid > .secondary-section > .section-title p {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-grid > .secondary-section > .secondary-card,
+.settings-grid > .secondary-section > .codey-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.settings-grid .section-icon {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.settings-grid .prompt-optimization-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.settings-grid .prompt-optimization-fields {
+  gap: 14px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.settings-grid .prompt-optimization-fields .field {
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.settings-grid .prompt-optimization-fields .field > label,
+.settings-grid .prompt-optimization-fields .field > span {
+  color: #475569;
+  font-size: 13px;
+}
+
+.settings-grid .prompt-optimization-instruction {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.settings-grid .subagent-card {
+  padding: 20px;
+}
+
+.settings-grid .secondary-card,
+.settings-grid .codey-surface {
+  border-color: #e2e8f0;
+  border-radius: 12px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 24px -18px rgba(15, 23, 42, 0.12);
+}
+
+.settings-grid .secondary-card:hover,
+.settings-grid .codey-surface:hover {
+  border-color: #cbd5e1;
+}
+
+.project-attribution {
+  display: grid;
+  gap: 4px;
+  margin: -8px 0 24px;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #475569;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.project-attribution-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e293b;
+}
+
+.project-attribution-title h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.project-attribution p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1023px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .settings-grid {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .settings-grid > .secondary-section > .section-title {
+    min-height: 0;
+  }
+
+  .settings-grid > .secondary-section > .secondary-card,
+  .settings-grid > .secondary-section > .codey-surface {
+    padding: 16px;
+  }
+}

@@ -6,7 +6,7 @@
 
 .codex-appearance-background-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
   align-items: start;
   gap: var(--codey-space-6);
   min-width: 0;
@@ -74,7 +74,7 @@
 
 .codex-appearance-preview-shell {
   display: grid;
-  width: min(100%, 360px);
+  width: min(100%, 280px);
   aspect-ratio: 16 / 9;
   justify-self: end;
   overflow: hidden;
@@ -110,7 +110,7 @@
 
 .codex-appearance-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--codey-space-5) var(--codey-space-4);
   padding-top: var(--codey-space-5);
   border-top: 1px solid var(--codey-color-border-subtle);
@@ -148,12 +148,24 @@
 }
 
 .codex-appearance-control input[type="range"]::-webkit-slider-thumb {
-  width: 0;
-  height: 0;
+  width: 12px;
+  height: 12px;
+  margin-top: -2px;
   appearance: none;
   -webkit-appearance: none;
-  border: 0;
-  background: transparent;
+  border: 2px solid var(--codey-color-accent);
+  border-radius: 50%;
+  background: var(--codey-color-surface);
+  box-shadow: 0 0 0 2px var(--codey-focus-ring);
+}
+
+.codex-appearance-control input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--codey-color-accent);
+  border-radius: 50%;
+  background: var(--codey-color-surface);
+  box-shadow: 0 0 0 2px var(--codey-focus-ring);
 }
 
 .codex-appearance-control input[type="range"]::-moz-range-track {
@@ -199,7 +211,7 @@
 
   .codex-appearance-preview-shell {
     justify-self: start;
-    width: min(100%, 360px);
+    width: min(100%, 280px);
   }
 }
 
