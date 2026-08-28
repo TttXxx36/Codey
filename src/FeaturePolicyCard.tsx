@@ -488,6 +488,29 @@ function FeaturePolicyCardComponent({
             </div>
           </div>
 
+          <div
+            className={
+              config.autoCheckUpdates !== false
+                ? "feature-card active"
+                : "feature-card"
+            }
+          >
+            <div className="feature-card-header">
+              <strong>自动检查更新</strong>
+              <Switch
+                checked={config.autoCheckUpdates !== false}
+                disabled={isBusy}
+                onCheckedChange={(checked) =>
+                  onConfigChange({ ...config, autoCheckUpdates: checked })
+                }
+                aria-label="允许自动检查更新"
+              />
+            </div>
+            <div className="feature-card-body">
+              <small>启动时检查 Codey 新版本，仅提示，不会自动下载或安装</small>
+            </div>
+          </div>
+
           {isMacClient && (
             <div
               className={`feature-card ${config.protectCrashpadPending ? "active" : ""}`}
