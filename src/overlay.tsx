@@ -3,6 +3,8 @@ import { MantineProvider } from "@mantine/core";
 import mantineStyles from "@mantine/core/styles.css?inline";
 import { App } from "./App";
 import coreStyles from "./styles.css?inline";
+import accountUsageStyles from "./styles.account-usage.css?inline";
+import appearanceStyles from "./styles.codex-appearance.css?inline";
 import operationsStyles from "./styles.operations.css?inline";
 import modelStyles from "./styles.models.css?inline";
 import featureStyles from "./styles.features.css?inline";
@@ -82,6 +84,8 @@ if (!window.__codeySettingsOverlay) {
     mantineStyles,
     tailwindStyles,
     coreStyles,
+    accountUsageStyles,
+    appearanceStyles,
     operationsStyles,
     modelStyles,
     featureStyles,

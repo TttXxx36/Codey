@@ -759,6 +759,10 @@
   };
 
 
+  const accountUsageConfigConflict = (result) =>
+    result?.status === "error" &&
+    /设置已被其他操作更新/.test(String(result?.message || ""));
+
   const persistAccountUsageLayout = (nextLayout) => {
     const normalized = normalizeAccountUsageLayout(nextLayout);
     accountUsageLayout = normalized;
@@ -769,30 +773,40 @@
         const pending = accountUsagePendingLayout;
         accountUsagePendingLayout = null;
         try {
-          const settingsResult = await withTimeout(
-            callBridge("/settings/get", {}, { timeoutMs: accountUsageTimeoutMs }),
-            accountUsageTimeoutMs,
-          );
-          const currentConfig = settingsResult?.config && typeof settingsResult.config === "object"
-            ? settingsResult.config
-            : settingsResult;
-          if (!currentConfig || typeof currentConfig !== "object" || currentConfig.status === "error") {
-            throw new Error("读取 Codey 配置失败");
+          let savedConfig = null;
+          let saved = false;
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const settingsResult = await withTimeout(
+              callBridge("/settings/get", {}, { timeoutMs: accountUsageTimeoutMs }),
+              accountUsageTimeoutMs,
+            );
+            const currentConfig = settingsResult?.config && typeof settingsResult.config === "object"
+              ? settingsResult.config
+              : settingsResult;
+            if (!currentConfig || typeof currentConfig !== "object" || currentConfig.status === "error") {
+              throw new Error("读取 Codey 配置失败");
+            }
+            const saveResult = await withTimeout(
+              callBridge(
+                "/api/save_codey_config",
+                { config: { ...currentConfig, accountUsageLayout: pending } },
+                { timeoutMs: accountUsageTimeoutMs },
+              ),
+              accountUsageTimeoutMs,
+            );
+            if (!saveResult || saveResult.status === "error") {
+              if (accountUsageConfigConflict(saveResult) && attempt < 2) {
+                continue;
+              }
+              throw new Error(saveResult?.message || "保存额度布局失败");
+            }
+            savedConfig = saveResult.config && typeof saveResult.config === "object"
+              ? saveResult.config
+              : null;
+            saved = true;
+            break;
           }
-          const saveResult = await withTimeout(
-            callBridge(
-              "/api/save_codey_config",
-              { config: { ...currentConfig, accountUsageLayout: pending } },
-              { timeoutMs: accountUsageTimeoutMs },
-            ),
-            accountUsageTimeoutMs,
-          );
-          if (!saveResult || saveResult.status === "error") {
-            throw new Error(saveResult?.message || "保存额度布局失败");
-          }
-          const savedConfig = saveResult.config && typeof saveResult.config === "object"
-            ? saveResult.config
-            : null;
+          if (!saved) throw new Error("保存额度布局失败");
           accountUsageLayout = normalizeAccountUsageLayout(
             savedConfig?.accountUsageLayout || pending,
           );
