@@ -254,6 +254,7 @@ export function App({
   } = useAppUpdates({
     embedded,
     configLoaded,
+    autoCheckUpdates: config?.autoCheckUpdates !== false,
     isBusy,
     setBusy,
     setNotice,
@@ -655,25 +656,48 @@ export function App({
       setNotice({ tone: "info", text: "官方账号线路至少需要保留一个模型" });
       return false;
     }
-    const providerId = profile.ccSwitchProviderId || profile.id;
-    const currentDefault = config.defaultModelByProvider[providerId] || "";
-    const defaultModel = models.find((model) =>
-      modelIdsEqual(model, currentDefault),
-    ) || models[0];
     let saved = false;
     await runOperation("save-official-route-settings", async () => {
-      const result = await persist({
-        ...config,
-        showAccountUsageInHeader,
-        selectedModelsByProvider: {
-          ...config.selectedModelsByProvider,
-          [providerId]: models,
-        },
-        defaultModelByProvider: {
-          ...config.defaultModelByProvider,
-          [providerId]: defaultModel,
-        },
-      });
+      let expectedRevision = config.settingsRevision;
+      let result: {
+        config: Config;
+        ccSwitch?: CcSwitchStatus;
+        modelState?: ModelState;
+        restartRequired?: boolean;
+      } | null = null;
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          result = await invoke<{
+            config: Config;
+            ccSwitch?: CcSwitchStatus;
+            modelState?: ModelState;
+            restartRequired?: boolean;
+          }>("save_official_route_models", {
+            routeId,
+            models,
+            expectedRevision,
+            showAccountUsageInHeader,
+          });
+          break;
+        } catch (error) {
+          if (!isSettingsRevisionConflict(error) || attempt === 2) {
+            throw error;
+          }
+          const latest = await invoke<{
+            config: Config;
+            ccSwitch?: CcSwitchStatus;
+            modelState?: ModelState;
+          }>("load_codey_config");
+          expectedRevision = latest.config.settingsRevision;
+          setPersistedConfig(latest.config);
+          if (latest.ccSwitch) setCcSwitchStatus(latest.ccSwitch);
+          if (latest.modelState) setModelState(latest.modelState);
+        }
+      }
+
+      if (!result) throw new Error("保存官方账号设置失败");
+      applyRouteResult(result);
       saved = true;
       setNotice({
         tone: result.restartRequired ? "info" : "success",
