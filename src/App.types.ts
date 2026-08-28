@@ -26,7 +26,9 @@ export type PromptOptimizationConfig = {
 };
 
 export type CodexAppearanceConfig = {
-  backgroundDataUrl: string;
+  /** Whether Codey's appearance layer is applied to the Codex page. */
+  enabled?: boolean;
+  backgroundDataUrl: string,
   backgroundFileName: string;
   backgroundOpacity: number;
   surfaceOpacity: number;
@@ -81,6 +83,8 @@ export type Config = {
   subagentRoles: Record<SubagentRoleId, SubagentRoleConfig>;
   hideFullAccessWarning: boolean;
   showAccountUsageInHeader: boolean;
+  /** Defaults to true; disables only the automatic startup/timer check. */
+  autoCheckUpdates?: boolean;
 };
 
 export type OfficialModelState = {

@@ -91,10 +91,6 @@
   outline-offset: 3px;
 }
 
-.subagent-toggle-card {
-  margin-bottom: 12px;
-}
-
 .subagent-policy-body {
   display: flex;
   flex-direction: column;

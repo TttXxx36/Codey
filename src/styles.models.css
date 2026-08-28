@@ -194,7 +194,33 @@
 
 .provider-model-list {
   display: grid;
+  max-height: 236px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--codey-color-border-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
   padding: 5px;
+}
+
+.provider-model-list:focus-visible {
+  outline: 2px solid var(--codey-focus-color);
+  outline-offset: -2px;
+}
+
+.provider-model-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.provider-model-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.provider-model-list::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--codey-radius-pill);
+  background: var(--codey-color-border-strong);
+  background-clip: content-box;
 }
 
 .provider-model-row {

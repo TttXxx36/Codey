@@ -647,7 +647,6 @@ export function App({
   async function saveOfficialRouteSettings(
     routeId: string,
     models: string[],
-    showAccountUsageInHeader: boolean,
   ) {
     if (!config) return false;
     const profile = config.profiles.find((candidate) => candidate.id === routeId);
@@ -677,7 +676,6 @@ export function App({
             routeId,
             models,
             expectedRevision,
-            showAccountUsageInHeader,
           });
           break;
         } catch (error) {
@@ -1287,7 +1285,6 @@ export function App({
               dirty={dirty}
               isBusy={isBusy}
               busy={busy}
-              showAccountUsageInHeader={config.showAccountUsageInHeader}
               onSyncCurrentProvider={handleSyncCurrentProvider}
               onSaveRoute={handleSaveRoute}
               onDeleteRoute={handleDeleteRoute}

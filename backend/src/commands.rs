@@ -1157,6 +1157,7 @@ async fn save_codey_config_locked(
     }
     config.hide_full_access_warning = config_input.hide_full_access_warning;
     config.show_account_usage_in_header = config_input.show_account_usage_in_header;
+    config.auto_check_updates = config_input.auto_check_updates;
     config.remember_current_subagent_config();
     let mut config = config.normalize();
     validate_official_account_config_change(&previous, &config)?;

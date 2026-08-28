@@ -11,11 +11,13 @@ import {
   Button,
   FieldRow,
   SectionHeader,
+  Switch,
   StatusChip,
   Surface,
 } from "./components/mantine";
 
 const DEFAULT_APPEARANCE: CodexAppearanceConfig = {
+  enabled: true,
   backgroundDataUrl: "",
   backgroundFileName: "",
   backgroundOpacity: 70,
@@ -85,6 +87,7 @@ export function CodexAppearanceCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileError, setFileError] = useState("");
   const appearance = config.codexAppearance ?? DEFAULT_APPEARANCE;
+  const appearanceEnabled = appearance.enabled !== false;
 
   const updateAppearance = (patch: Partial<CodexAppearanceConfig>) => {
     onConfigChange({
@@ -122,9 +125,23 @@ export function CodexAppearanceCard({
         icon={<IconAdjustmentsHorizontal size={15} />}
         title="Codex 外观调整"
         description="统一管理背景图片、对话宽度和界面遮罩。"
+        action={
+          <Switch
+            checked={appearanceEnabled}
+            disabled={isBusy}
+            onCheckedChange={(checked) => updateAppearance({ enabled: checked })}
+            aria-label="启用 Codex 外观调整"
+          />
+        }
         status={
-          <StatusChip tone={appearance.backgroundDataUrl ? "success" : "secondary"}>
-            {appearance.backgroundDataUrl ? "背景已设置" : "未设置背景"}
+          <StatusChip
+            tone={!appearanceEnabled ? "secondary" : appearance.backgroundDataUrl ? "success" : "secondary"}
+          >
+            {!appearanceEnabled
+              ? "已停用"
+              : appearance.backgroundDataUrl
+                ? "背景已设置"
+                : "未设置背景"}
           </StatusChip>
         }
       />
@@ -184,10 +201,10 @@ export function CodexAppearanceCard({
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            disabled={isBusy}
+            disabled={isBusy || !appearanceEnabled}
           />
           <Button
-            disabled={isBusy}
+            disabled={isBusy || !appearanceEnabled}
             onClick={() => fileInputRef.current?.click()}
             size="sm"
             variant="outline"
@@ -198,7 +215,7 @@ export function CodexAppearanceCard({
           {appearance.backgroundDataUrl && (
             <Button
               aria-label="移除 Codex 背景图片"
-              disabled={isBusy}
+              disabled={isBusy || !appearanceEnabled}
               onClick={() =>
                 updateAppearance({
                   backgroundDataUrl: "",
@@ -233,7 +250,7 @@ export function CodexAppearanceCard({
                   100,
                 ),
               } as CSSProperties}
-              disabled={isBusy}
+              disabled={isBusy || !appearanceEnabled}
               onChange={(event) =>
                 updateAppearance({ backgroundOpacity: Number(event.target.value) })
               }
@@ -258,7 +275,7 @@ export function CodexAppearanceCard({
                   80,
                 ),
               } as CSSProperties}
-              disabled={isBusy}
+              disabled={isBusy || !appearanceEnabled}
               onChange={(event) =>
                 updateAppearance({ surfaceOpacity: Number(event.target.value) })
               }
@@ -283,7 +300,7 @@ export function CodexAppearanceCard({
                   1800,
                 ),
               } as CSSProperties}
-              disabled={isBusy}
+              disabled={isBusy || !appearanceEnabled}
               onChange={(event) =>
                 updateAppearance({ chatWidth: Number(event.target.value) })
               }

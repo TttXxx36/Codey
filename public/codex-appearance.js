@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = 2;
+  const VERSION = 3;
   const initialSettings = __CODEY_CODEX_APPEARANCE_SETTINGS__;
   const BACKGROUND_ID = "codey-codex-appearance-background";
   const STYLE_ID = "codey-codex-appearance-style";
@@ -14,6 +14,7 @@
     "codex-user-chat-width",
   ];
   const DEFAULTS = {
+    enabled: true,
     backgroundDataUrl: "",
     backgroundFileName: "",
     backgroundOpacity: 70,
@@ -27,7 +28,7 @@
   window.__codeyCodexAppearance?.destroy?.();
 
   let settings = normalizeSettings(initialSettings);
-  let ownsBackground = Boolean(settings.backgroundDataUrl);
+  let ownsBackground = settings.enabled !== false && Boolean(settings.backgroundDataUrl);
   let syncTimer = 0;
   let resizeObserver = null;
   let observedRegion = null;
@@ -50,6 +51,7 @@
     return {
       ...DEFAULTS,
       ...source,
+      enabled: source.enabled !== false,
       backgroundDataUrl,
       backgroundFileName: String(source.backgroundFileName || "").slice(0, 128),
       backgroundOpacity: Math.max(0, Math.min(100, numberOr(source.backgroundOpacity, DEFAULTS.backgroundOpacity))),
@@ -196,9 +198,10 @@
     const next = normalizeSettings(nextSettings);
     const wasOwner = ownsBackground;
     settings = next;
-    ownsBackground = Boolean(next.backgroundDataUrl);
-    const hasExplicitSettings = hasExplicitAppearanceSettings(next);
-    if (ownsBackground || hasExplicitSettings) {
+    const appearanceEnabled = next.enabled !== false;
+    ownsBackground = appearanceEnabled && Boolean(next.backgroundDataUrl);
+    const hasExplicitSettings = appearanceEnabled && hasExplicitAppearanceSettings(next);
+    if (!appearanceEnabled || ownsBackground || hasExplicitSettings) {
       removeLegacyCustomizer();
     } else if (wasOwner) {
       // Do not let the old external watcher restore a stale image after the
@@ -206,7 +209,16 @@
       window.localStorage?.removeItem?.(LEGACY_STORAGE_KEY);
     }
 
-    if (!wasOwner && !ownsBackground && !hasExplicitSettings && hasLegacyCustomizer()) {
+    if (appearanceEnabled && !wasOwner && !ownsBackground && !hasExplicitSettings && hasLegacyCustomizer()) {
+      return snapshot();
+    }
+
+    if (!appearanceEnabled) {
+      const style = ensureStyle();
+      style.textContent = "";
+      document.documentElement?.setAttribute("data-codey-appearance-active", "false");
+      document.getElementById(BACKGROUND_ID)?.remove?.();
+      observeLayout();
       return snapshot();
     }
 
@@ -276,6 +288,7 @@
     return {
       ready: true,
       ownsBackground,
+      enabled: settings.enabled !== false,
       imageSet: Boolean(settings.backgroundDataUrl),
       backgroundOpacity: settings.backgroundOpacity,
       surfaceOpacity: settings.surfaceOpacity,
