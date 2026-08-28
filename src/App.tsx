@@ -26,6 +26,10 @@ import {
 } from "./notifications";
 import type { NotificationChannel } from "./notifications";
 import { errorText, withTimeout } from "./appUtils";
+import {
+  isSettingsRevisionConflict,
+  mergeConfigDraft,
+} from "./configSaveMerge";
 import { formatBytes } from "./formatters";
 import { modelIdsEqual, uniqueModelIds } from "./modelIds";
 import { CodeyBrandMark, SettingsModalShell } from "./SettingsModalShell";
@@ -331,22 +335,45 @@ export function App({
   }
 
   async function persist(next: Config) {
-    const result = await invoke<{
-      config: Config;
-      ccSwitch?: CcSwitchStatus;
-      modelState?: ModelState;
-      restartRequired?: boolean;
-      modelHotReloaded?: boolean;
-      modelHotReloadError?: string;
-      subagentConfigHotReloaded?: boolean;
-      subagentConfigRepaired?: boolean;
-      subagentConfigHealth?: string;
-      subagentConfigRepairReasons?: string[];
-      subagentConfigHotReloadError?: string;
-      subagentDefaultsHotReloaded?: boolean;
-      subagentDefaultsHotReloadError?: string;
-      fastContextToolsStatus?: FastContextToolsStatus;
-    }>("save_codey_config", { config: next });
+    const knownPersistedConfig = persistedConfigRef.current;
+    const saveConfig = (draft: Config) =>
+      invoke<{
+        config: Config;
+        ccSwitch?: CcSwitchStatus;
+        modelState?: ModelState;
+        restartRequired?: boolean;
+        modelHotReloaded?: boolean;
+        modelHotReloadError?: string;
+        subagentConfigHotReloaded?: boolean;
+        subagentConfigRepaired?: boolean;
+        subagentConfigHealth?: string;
+        subagentConfigRepairReasons?: string[];
+        subagentConfigHotReloadError?: string;
+        subagentDefaultsHotReloaded?: boolean;
+        subagentDefaultsHotReloadError?: string;
+        fastContextToolsStatus?: FastContextToolsStatus;
+      }>("save_codey_config", { config: draft });
+
+    let result: Awaited<ReturnType<typeof saveConfig>> | null = null;
+    let draft = next;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        result = await saveConfig(draft);
+        break;
+      } catch (error) {
+        if (
+          !isSettingsRevisionConflict(error) ||
+          attempt === 2 ||
+          !knownPersistedConfig
+        ) {
+          throw error;
+        }
+        const latest = await invoke<{ config: Config }>("load_codey_config");
+        draft = mergeConfigDraft(knownPersistedConfig, next, latest.config);
+      }
+    }
+
+    if (!result) throw new Error("保存 Codey 配置失败");
     setPersistedConfig(result.config);
     setFastContextToolsStatus(
       result.fastContextToolsStatus ?? UNKNOWN_FAST_CONTEXT_TOOLS_STATUS,
