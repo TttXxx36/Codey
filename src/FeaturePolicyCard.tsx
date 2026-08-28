@@ -10,6 +10,7 @@ import {
   ActionIcon,
   Badge,
   Card,
+  SectionHeader,
   Select,
   Switch,
   Table,
@@ -98,33 +99,22 @@ export function SubagentPolicyCardComponent({
 
   return (
     <section className="secondary-section subagent-section" aria-labelledby="subagent-title">
-      <div className="section-title compact">
-        <div className="section-heading">
-          <span className="section-icon" aria-hidden="true">
-            <IconUsersGroup size={15} />
-          </span>
-          <div>
-            <h2 id="subagent-title">Codey 子代理角色与调度增强</h2>
-            <p>基于 Codex 原生子代理的多角色调度与模型配置。</p>
-          </div>
-        </div>
-      </div>
+      <SectionHeader
+        id="subagent-title"
+        icon={<IconUsersGroup size={15} />}
+        title="Codey 子代理角色与调度增强"
+        description="基于 Codex 原生子代理的多角色调度与模型配置。"
+        action={
+          <Switch
+            checked={config.subagentOptimization}
+            disabled={isBusy}
+            onCheckedChange={onSubagentOptimizationChange}
+            aria-label="启用 Codey 子代理角色与调度增强"
+          />
+        }
+      />
+
       <Card className={`secondary-card subagent-card ${surfaceCardPaddingClass}`}>
-        <div className={`feature-card subagent-toggle-card ${config.subagentOptimization ? "active" : ""}`}>
-          <div className="feature-card-header">
-            <div className="feature-card-title">
-              <strong>启用 Codey 子代理角色与调度增强</strong>
-            </div>
-            <Switch
-              checked={config.subagentOptimization}
-              disabled={isBusy}
-              onCheckedChange={(checked) =>
-                onSubagentOptimizationChange(checked)
-              }
-              aria-label="启用 Codey 子代理角色与调度增强"
-            />
-          </div>
-        </div>
         <div className="subagent-policy-body">
           {config.subagentOptimization ? (
             <>
@@ -495,6 +485,29 @@ function FeaturePolicyCardComponent({
             </div>
             <div className="feature-card-body">
               <small>阻止Trace日志持续写入数据库影响硬盘寿命</small>
+            </div>
+          </div>
+
+          <div
+            className={
+              config.autoCheckUpdates !== false
+                ? "feature-card active"
+                : "feature-card"
+            }
+          >
+            <div className="feature-card-header">
+              <strong>自动检查更新</strong>
+              <Switch
+                checked={config.autoCheckUpdates !== false}
+                disabled={isBusy}
+                onCheckedChange={(checked) =>
+                  onConfigChange({ ...config, autoCheckUpdates: checked })
+                }
+                aria-label="允许自动检查更新"
+              />
+            </div>
+            <div className="feature-card-body">
+              <small>启动时检查 Codey 新版本，仅提示，不会自动下载或安装</small>
             </div>
           </div>
 

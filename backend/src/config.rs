@@ -243,6 +243,8 @@ pub const CODEX_APPEARANCE_MAX_DATA_URL_CHARS: usize = 8_000_000;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexAppearanceConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
     #[serde(default)]
     pub background_data_url: String,
     #[serde(default)]
@@ -258,6 +260,7 @@ pub struct CodexAppearanceConfig {
 impl Default for CodexAppearanceConfig {
     fn default() -> Self {
         Self {
+            enabled: true,
             background_data_url: String::new(),
             background_file_name: String::new(),
             background_opacity: default_codex_background_opacity(),
@@ -490,6 +493,10 @@ pub struct CodeyConfig {
     /// header. The renderer only activates this for an official login route.
     #[serde(default = "default_true")]
     pub show_account_usage_in_header: bool,
+    /// Checks for Codey updates on startup and on the existing timer. It never
+    /// downloads or installs an update automatically.
+    #[serde(default = "default_true")]
+    pub auto_check_updates: bool,
     /// Launch-scoped authentication capability captured from Codex before
     /// Codey's temporary provider overrides are applied. It is intentionally
     /// never persisted or exposed as part of the editable configuration.
@@ -537,6 +544,7 @@ impl Default for CodeyConfig {
             initial_route_import_completed: false,
             hide_full_access_warning: false,
             show_account_usage_in_header: true,
+            auto_check_updates: true,
             official_account_available_this_launch: false,
             update_manifest_url: default_update_manifest_url(),
         }

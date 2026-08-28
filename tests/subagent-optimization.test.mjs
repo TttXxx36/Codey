@@ -13,8 +13,9 @@ test("subagent settings expose the five supported role controls", async () => {
   assert.match(featurePolicySource, /checked=\{config\.subagentOptimization\}/);
   assert.match(
     featurePolicySource,
-    /onCheckedChange=\{\(checked\) =>\s*onSubagentOptimizationChange\(checked\)\s*\}/,
+    /onCheckedChange=\{onSubagentOptimizationChange\}/,
   );
+  assert.doesNotMatch(featurePolicySource, /subagent-toggle-card/);
   for (const [id, name] of [
     ["codey_quick_scan", "快速定位"],
     ["codey_deep_research", "深度检索"],

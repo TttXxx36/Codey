@@ -8,7 +8,7 @@ const appearanceSource = readFileSync(
 );
 
 test("Codex appearance keeps the image inside the conversation surface", () => {
-  assert.match(appearanceSource, /const VERSION = 2/);
+  assert.match(appearanceSource, /const VERSION = 3/);
   assert.match(appearanceSource, /removeStaleAppearanceButton/);
   assert.doesNotMatch(appearanceSource, /ensureAppearanceButton/);
   assert.doesNotMatch(appearanceSource, /__codeySettingsOverlay\?\.toggle/);

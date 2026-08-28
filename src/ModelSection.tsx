@@ -22,7 +22,6 @@ import {
   DialogTitle,
   Input,
   Select,
-  Switch,
 } from "./components/mantine";
 import { modelIdsEqual, modelKey } from "./modelIds";
 import { SETTINGS_OVERLAY_Z_INDEX } from "./overlay.constants";
@@ -36,7 +35,6 @@ type ModelSectionProps = {
   dirty: boolean;
   isBusy: boolean;
   busy: string | null;
-  showAccountUsageInHeader: boolean;
   onSyncCurrentProvider: () => void;
   onSaveRoute: (route: Profile) => Promise<boolean>;
   onDeleteRoute: (routeId: string) => void;
@@ -44,7 +42,6 @@ type ModelSectionProps = {
   onSaveOfficialRouteSettings: (
     routeId: string,
     models: string[],
-    showAccountUsageInHeader: boolean,
   ) => Promise<boolean>;
   onSetDefaultModel: (routeId: string, model: string) => void;
 };
@@ -110,7 +107,6 @@ function ModelSectionComponent({
   dirty,
   isBusy,
   busy,
-  showAccountUsageInHeader,
   onSyncCurrentProvider,
   onSaveRoute,
   onDeleteRoute,
@@ -121,7 +117,6 @@ function ModelSectionComponent({
   const [routeDialogOpen, setRouteDialogOpen] = useState(false);
   const [routeDraft, setRouteDraft] = useState<Profile | null>(null);
   const [officialModelDraft, setOfficialModelDraft] = useState<string[]>([]);
-  const [usageDraft, setUsageDraft] = useState(showAccountUsageInHeader);
   const visibleProfiles = useMemo(
     () =>
       config.profiles.filter(
@@ -204,7 +199,6 @@ function ModelSectionComponent({
               ...modelState.officialModels.map((model) => model.slug),
             ]),
       );
-      setUsageDraft(showAccountUsageInHeader);
     }
     setRouteDialogOpen(true);
   };
@@ -217,7 +211,6 @@ function ModelSectionComponent({
       ? await onSaveOfficialRouteSettings(
           routeDraft.id,
           officialModelDraft,
-          usageDraft,
         )
       : await onSaveRoute(routeDraft);
     if (saved) {
@@ -302,7 +295,7 @@ function ModelSectionComponent({
                           </Badge>
                         )}
                         {profile.authMode === "officialAccount" &&
-                          showAccountUsageInHeader && (
+                          config.showAccountUsageInHeader !== false && (
                             <Badge variant="info">额度已开启</Badge>
                           )}
                       </span>
@@ -377,7 +370,12 @@ function ModelSectionComponent({
                     </div>
                   </div>
 
-                  <div className="provider-model-list">
+                  <div
+                    className="provider-model-list"
+                    role="region"
+                    tabIndex={0}
+                    aria-label={`${group.profile.name}模型列表`}
+                  >
                     {group.models.map((model) => {
                       const isDefault = modelIdsEqual(group.defaultModel, model);
                       return (
@@ -474,7 +472,7 @@ function ModelSectionComponent({
               </DialogTitle>
               <DialogDescription>
                 {routeDraft.authMode === "officialAccount"
-                  ? "选择允许在 Codex 中使用的官方模型，并配置账户额度展示。"
+                  ? "选择允许在 Codex 中使用的官方模型。额度显示可在“额度显示”设置中单独管理。"
                   : "配置第三方服务的接入信息。保存后可在模型目录中同步模型。"}
               </DialogDescription>
             </DialogHeader>
@@ -487,19 +485,6 @@ function ModelSectionComponent({
                     <small>使用当前 Codex 官方账号登录状态</small>
                   </span>
                   <Badge variant="info">官方账号</Badge>
-                </div>
-
-                <div className="official-usage-setting">
-                  <span>
-                    <strong>在账户区域显示额度</strong>
-                    <small>开启后，Codex 账户卡片会展示额度与重置时间。</small>
-                  </span>
-                  <Switch
-                    checked={usageDraft}
-                    disabled={isBusy}
-                    onCheckedChange={setUsageDraft}
-                    aria-label="在账户区域显示额度"
-                  />
                 </div>
 
                 <div className="official-model-editor">

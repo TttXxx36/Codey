@@ -850,6 +850,7 @@ export function Surface({
 }
 
 export interface SectionHeaderProps {
+  action?: React.ReactNode;
   className?: string;
   description?: React.ReactNode;
   icon?: React.ReactNode;
@@ -859,6 +860,7 @@ export interface SectionHeaderProps {
 }
 
 export function SectionHeader({
+  action,
   className,
   description,
   icon,
@@ -879,8 +881,13 @@ export function SectionHeader({
           {description ? <p>{description}</p> : null}
         </div>
       </div>
-      {status ? (
-        <div className="section-header-status">{status}</div>
+      {action || status ? (
+        <div className="section-header-actions">
+          {action ? <div className="section-header-action">{action}</div> : null}
+          {status ? (
+            <div className="section-header-status">{status}</div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

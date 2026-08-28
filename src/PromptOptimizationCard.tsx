@@ -15,7 +15,15 @@ import {
 import type { CcSwitchStatus, Config, InlineResult } from "./App.types";
 import { invoke } from "./api";
 import { errorText, withTimeout } from "./appUtils";
-import { Button, Card, Input, PasswordInput, Select, Switch } from "./components/mantine";
+import {
+  Button,
+  Card,
+  Input,
+  PasswordInput,
+  SectionHeader,
+  Select,
+  Switch,
+} from "./components/mantine";
 import { SETTINGS_OVERLAY_Z_INDEX } from "./overlay.constants";
 import {
   inputShellClass,
@@ -268,37 +276,22 @@ function PromptOptimizationCardComponent({
       className="secondary-section"
       aria-labelledby="prompt-optimization-title"
     >
-      <div className="section-title compact">
-        <div className="section-heading">
-          <span className="section-icon" aria-hidden="true">
-            <IconSparkles size={15} />
-          </span>
-          <div>
-            <h2 id="prompt-optimization-title">提示词优化</h2>
-            <p>在 Codex 输入框旁一键重写与优化提示词。</p>
-          </div>
-        </div>
-      </div>
-      <Card className={`secondary-card prompt-optimization-card ${surfaceCardPaddingClass}`}>
-        <div
-          className={`feature-card prompt-optimization-toggle${optimization.enabled ? " active" : ""}`}
-        >
-          <div className="feature-card-header">
-            <div className="feature-card-title">
-              <IconSparkles size={16} aria-hidden="true" />
-              <strong>启用提示词优化</strong>
-            </div>
-            <Switch
-              checked={optimization.enabled}
-              disabled={isBusy}
-              aria-label="启用提示词优化"
-              onCheckedChange={(checked) =>
-                updateOptimization({ enabled: checked })
-              }
-            />
-          </div>
-        </div>
+      <SectionHeader
+        id="prompt-optimization-title"
+        icon={<IconSparkles size={15} />}
+        title="提示词优化"
+        description="在 Codex 输入框旁一键重写与优化提示词。"
+        action={
+          <Switch
+            checked={optimization.enabled}
+            disabled={isBusy}
+            aria-label="启用提示词优化"
+            onCheckedChange={(checked) => updateOptimization({ enabled: checked })}
+          />
+        }
+      />
 
+      <Card className={`secondary-card prompt-optimization-card ${surfaceCardPaddingClass}`}>
         {optimization.enabled ? (
           <div className="prompt-optimization-fields">
             <div className="prompt-optimization-actions-row">

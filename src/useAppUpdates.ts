@@ -31,6 +31,7 @@ declare global {
 type UseAppUpdatesOptions = {
   embedded: boolean;
   configLoaded: boolean;
+  autoCheckUpdates: boolean;
   isBusy: boolean;
   setBusy: Dispatch<SetStateAction<string | null>>;
   setNotice: Dispatch<SetStateAction<Notice>>;
@@ -68,6 +69,7 @@ function publishUpdateAvailability(result: UpdateCheck | null) {
 export function useAppUpdates({
   embedded,
   configLoaded,
+  autoCheckUpdates,
   isBusy,
   setBusy,
   setNotice,
@@ -133,7 +135,7 @@ export function useAppUpdates({
   }, []);
 
   useEffect(() => {
-    if (embedded || !configLoaded) return;
+    if (embedded || !configLoaded || !autoCheckUpdates) return;
     let cancelled = false;
     let timer = 0;
 
@@ -182,7 +184,7 @@ export function useAppUpdates({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [configLoaded, embedded, requestUpdateCheck]);
+  }, [autoCheckUpdates, configLoaded, embedded, requestUpdateCheck]);
 
   async function checkForUpdates() {
     if (!configLoaded || isBusy) return;

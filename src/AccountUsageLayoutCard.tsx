@@ -7,6 +7,7 @@ import {
   SectionHeader,
   StatusChip,
   Surface,
+  Switch,
 } from "./components/mantine";
 
 const DEFAULT_ACCOUNT_USAGE_LAYOUT: AccountUsageLayoutConfig = {
@@ -75,6 +76,16 @@ export function AccountUsageLayoutCard({
         icon={<IconAdjustmentsHorizontal size={15} />}
         title="额度显示"
         description="管理 Plus 5 小时额度和周额度在 Codex 中的显示方式。"
+        action={
+          <Switch
+            checked={config.showAccountUsageInHeader !== false}
+            disabled={isBusy}
+            onCheckedChange={(checked) =>
+              onConfigChange({ ...config, showAccountUsageInHeader: checked })
+            }
+            aria-label="显示 Codex 额度信息"
+          />
+        }
         status={
           <StatusChip tone={layout.mode === "free" ? "info" : "secondary"}>
             {layout.mode === "free" ? "自由拖动" : "固定左下角"}

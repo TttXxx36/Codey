@@ -80,7 +80,7 @@ test("settings panels keep stable handlers and skip unrelated parent renders", a
   assert.match(sections, /className="route-manager route-manager-balanced"/);
   assert.match(sections, /className="provider-model-groups"/);
   assert.match(sections, /modelState\.officialModelIds/);
-  assert.match(sections, /checked=\{usageDraft\}/);
+  assert.doesNotMatch(sections, /usageDraft|official-usage-setting/);
   assert.match(sections, /checked=\{checked\}/);
   assert.match(sections, /额度已开启/);
   assert.match(sections, /支持的模型/);
