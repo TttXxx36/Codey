@@ -133,17 +133,6 @@ export function CodexAppearanceCard({
             aria-label="启用 Codex 外观调整"
           />
         }
-        status={
-          <StatusChip
-            tone={!appearanceEnabled ? "secondary" : appearance.backgroundDataUrl ? "success" : "secondary"}
-          >
-            {!appearanceEnabled
-              ? "已停用"
-              : appearance.backgroundDataUrl
-                ? "背景已设置"
-                : "未设置背景"}
-          </StatusChip>
-        }
       />
 
       <Surface className="codex-appearance-card">
@@ -233,6 +222,30 @@ export function CodexAppearanceCard({
         <div className="codex-appearance-controls">
           <FieldRow
             className="codex-appearance-control"
+            label="对话内容宽度"
+            value={appearance.chatWidth + "px"}
+            description="限制中央对话正文的最大宽度，不影响左侧会话栏。"
+          >
+            <input
+              type="range"
+              min="800"
+              max="1800"
+              step="10"
+              value={appearance.chatWidth}
+              style={{
+                "--codey-range-progress": rangeProgress(
+                  appearance.chatWidth,
+                  800,
+                  1800,
+                ),
+              } as CSSProperties}
+              disabled={isBusy || !appearanceEnabled}
+              onChange={(event) =>
+                updateAppearance({ chatWidth: Number(event.target.value) })
+              }
+            />
+          </FieldRow>          <FieldRow
+            className="codex-appearance-control"
             label="背景显示强度"
             value={appearance.backgroundOpacity + "%"}
             description="调节背景图片的可见程度，数值越高越突出。"
@@ -281,31 +294,7 @@ export function CodexAppearanceCard({
               }
             />
           </FieldRow>
-          <FieldRow
-            className="codex-appearance-control"
-            label="对话内容宽度"
-            value={appearance.chatWidth + "px"}
-            description="限制中央对话正文的最大宽度，不影响左侧会话栏。"
-          >
-            <input
-              type="range"
-              min="800"
-              max="1800"
-              step="10"
-              value={appearance.chatWidth}
-              style={{
-                "--codey-range-progress": rangeProgress(
-                  appearance.chatWidth,
-                  800,
-                  1800,
-                ),
-              } as CSSProperties}
-              disabled={isBusy || !appearanceEnabled}
-              onChange={(event) =>
-                updateAppearance({ chatWidth: Number(event.target.value) })
-              }
-            />
-          </FieldRow>
+
         </div>
 
         <small className="codex-appearance-help">

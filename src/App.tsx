@@ -5,7 +5,6 @@ import {
   IconDeviceFloppy as Save,
   IconGitBranch as GitBranch,
   IconLoader2 as LoaderCircle,
-  IconMessageCircleQuestion,
   IconRefresh as RefreshCw,
   IconX,
 } from "@tabler/icons-react";
@@ -62,20 +61,10 @@ import { Badge, Button, Tooltip } from "./components/mantine";
 
 const Check = IconCheck;
 const X = IconX;
-const FEEDBACK_GROUP_QR_BASE_URL =
-  "https://pub-2d17a6a8bc22426a92e297a59f55ccc3.r2.dev/qr.png";
 const UNKNOWN_FAST_CONTEXT_TOOLS_STATUS: FastContextToolsStatus = {
   userConfigured: false,
   detectionFailed: true,
 };
-
-function localDateCacheKey(date: Date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("");
-}
 
 function configWithoutPromptOptimization(config: Config): Partial<Config> {
   const comparable: Partial<Config> = { ...config };
@@ -126,8 +115,6 @@ export function App({
   onAfterClose,
   onClose,
 }: AppProps) {
-  const feedbackGroupQrUrl =
-    `${FEEDBACK_GROUP_QR_BASE_URL}?date=${localDateCacheKey(new Date())}`;
   const [config, setConfig] = useState<Config | null>(null);
   const persistedConfigRef = useRef<Config | null>(null);
   const { status, setStatus, refreshStatus, refreshStatusForLoad } =
@@ -1068,7 +1055,7 @@ export function App({
           : "检查 Codey 在线更新";
 
   const configHeaderContent = (
-    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-5 max-[760px]:grid-cols-[minmax(0,1fr)_auto_auto] max-[760px]:gap-2.5">
+    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-5 max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:gap-2.5">
       <div className="flex min-w-0 items-center gap-3 justify-self-start max-[760px]:gap-2">
         <CodeyBrandMark />
         <div className="flex min-w-0 flex-col">
@@ -1134,25 +1121,6 @@ export function App({
           <p className="m-0 mt-0.5 text-[11px] text-[#6e6e73] max-[760px]:hidden">管理 Codex 线路、模型服务、运行策略与诊断日志</p>
         </div>
       </div>
-
-      {embedded && (
-        <div className="config-header-feedback justify-self-center">
-          <Button
-            aria-describedby="codey-feedback-qr-description"
-            aria-label="问题反馈群，悬浮或聚焦查看二维码"
-            className="whitespace-nowrap max-[520px]:w-8! max-[520px]:px-0!"
-            size="sm"
-            variant="brand-outline"
-          >
-            <IconMessageCircleQuestion aria-hidden="true" />
-            <span className="inline-flex items-center gap-[7px] max-[520px]:hidden">问题反馈群</span>
-          </Button>
-          <div className="feedback-qr-popover" role="tooltip">
-            <img src={feedbackGroupQrUrl} alt="问题反馈群二维码" />
-            <span id="codey-feedback-qr-description">扫码加入问题反馈群</span>
-          </div>
-        </div>
-      )}
 
       <div className="flex min-w-0 items-center gap-4 justify-self-end">
         <div className="flex items-center gap-2">
@@ -1294,52 +1262,41 @@ export function App({
             />
           </div>
 
-          {/* Codex 额度：位置偏好与可拖动模式 */}
-          <div className="full-row-section">
+          {/* 额度显示与提示词优化：两列设置网格 */}
+          <div className="settings-grid settings-grid-quota-prompt">
             <AccountUsageLayoutCard
               config={config}
               isBusy={isBusy}
               onConfigChange={editConfig}
             />
+            <PromptOptimizationCard
+              config={config}
+              provider={provider}
+              busy={busy}
+              isBusy={isBusy}
+              popupContainer={popupContainer}
+              onConfigChange={handleConfigChange}
+              onSyncCurrentProvider={
+                handleSyncPromptOptimizationCurrentProvider
+              }
+            />
           </div>
 
-          {/* 提示词优化 与 Codey 子代理角色与调度增强：放在一行 */}
-          <div className="prompt-subagent-grid">
-            {/* 左侧：提示词优化 */}
-            <div className="prompt-column">
-              <PromptOptimizationCard
-                config={config}
-                provider={provider}
-                busy={busy}
-                isBusy={isBusy}
-                popupContainer={popupContainer}
-                onConfigChange={handleConfigChange}
-                onSyncCurrentProvider={
-                  handleSyncPromptOptimizationCurrentProvider
-                }
-              />
-            </div>
-
-            {/* 右侧：Codey 子代理角色与调度增强 */}
-            <div className="subagent-column">
-              <SubagentPolicyCard
-                config={config}
-                popupContainer={popupContainer}
-                tooltipContainer={portalContainer}
-                isBusy={isBusy}
-                subagentModelOptions={subagentModelOptions}
-                onConfigChange={handleConfigChange}
-                onSubagentOptimizationChange={handleSubagentOptimizationChange}
-              />
-            </div>
-          </div>
-
-          {/* Codex 外观：背景、对话宽度与界面遮罩 */}
-          <div className="full-row-section">
+          {/* Codex 外观与子代理：两列设置网格 */}
+          <div className="settings-grid settings-grid-appearance-subagent">
             <CodexAppearanceCard
               config={config}
               isBusy={isBusy}
               onConfigChange={editConfig}
+            />
+            <SubagentPolicyCard
+              config={config}
+              popupContainer={popupContainer}
+              tooltipContainer={portalContainer}
+              isBusy={isBusy}
+              subagentModelOptions={subagentModelOptions}
+              onConfigChange={handleConfigChange}
+              onSubagentOptimizationChange={handleSubagentOptimizationChange}
             />
           </div>
 
@@ -1385,6 +1342,15 @@ export function App({
               onRefresh={handleRefreshTraceLogStats}
             />
           </div>
+
+          <footer className="project-attribution" aria-labelledby="project-attribution-title">
+            <div className="project-attribution-title">
+              <GitBranch aria-hidden="true" size={15} />
+              <h2 id="project-attribution-title">项目归属</h2>
+            </div>
+            <p>原项目开发主体：SuperGness</p>
+            <p>本项目基于原项目 fork，由 TttXxx36 进行后续完善与维护。</p>
+          </footer>
         </div>
       </div>
 

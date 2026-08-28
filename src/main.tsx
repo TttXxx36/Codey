@@ -23,6 +23,7 @@ import "./styles.models.css";
 import "./styles.features.css";
 import "./styles.diagnostics.css";
 import "./styles.responsive.css";
+import "./styles.settings.css";
 
 // 在 Vite 开发模式下，若未通过 Codey Bridge/Token 访问，自动注入 Mock 接口方便 UI 调试
 if (import.meta.env.DEV) {
