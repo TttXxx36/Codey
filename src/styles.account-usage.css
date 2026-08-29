@@ -1,17 +1,17 @@
 .account-usage-layout-card {
   display: grid;
-  gap: var(--codey-space-5);
-  padding: var(--codey-space-5);
+  gap: var(--codey-space-4);
+  padding: 0;
 }
 
 .account-usage-position-field {
-  gap: var(--codey-space-3);
+  gap: var(--codey-space-2);
 }
 
 .account-usage-mode-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--codey-space-3);
+  gap: var(--codey-space-2);
 }
 
 .account-usage-mode-option {
@@ -23,14 +23,15 @@
   min-width: 0;
   border: 1px solid var(--codey-color-border);
   border-radius: var(--codey-radius-lg);
-  padding: var(--codey-space-4);
+  padding: var(--codey-space-3);
   background: var(--codey-color-surface-subtle);
   color: var(--codey-color-text-secondary-strong);
   cursor: pointer;
   transition:
     border-color 150ms ease,
     background-color 150ms ease,
-    box-shadow 150ms ease;
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 .account-usage-mode-option::before {
@@ -38,7 +39,7 @@
   width: 18px;
   height: 18px;
   place-items: center;
-  margin-top: 2px;
+  margin-top: 1px;
   border: 1px solid var(--codey-color-border-strong);
   border-radius: var(--codey-radius-sm);
   background: var(--codey-color-surface);
@@ -50,8 +51,9 @@
 }
 
 .account-usage-mode-option:hover {
-  border-color: var(--codey-color-border-hover);
+  border-color: var(--codey-color-accent-border);
   box-shadow: var(--codey-shadow-surface);
+  transform: translateY(-1px);
 }
 
 .account-usage-mode-option.selected {
@@ -101,15 +103,15 @@
 .account-usage-mode-option small {
   color: var(--codey-color-text-secondary);
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .account-usage-layout-actions {
   align-items: flex-start;
   justify-content: flex-start;
-  gap: var(--codey-space-4);
-  padding-top: var(--codey-space-4);
-  border-top: 1px solid var(--codey-color-border-subtle);
+  gap: var(--codey-space-3);
+  padding-top: 0;
+  border-top: 0;
 }
 
 @media (max-width: 760px) {

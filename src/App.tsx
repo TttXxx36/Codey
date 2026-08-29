@@ -1230,18 +1230,6 @@ export function App({
 
       <div className="page-scroll">
         <div className="page" id="codey-settings-content">
-          {/* 最上方：运行状态 (Codex 运行与维护) */}
-          <OperationsPanel
-            codexAppPath={config.codexAppPath}
-            fastContextToolsStatus={fastContextToolsStatus}
-            status={operationsStatus}
-            busy={busy}
-            isBusy={isBusy}
-            pluginMarketplaceStatus={pluginMarketplaceStatus}
-            onRepairPluginMarketplace={handleRepairPluginMarketplace}
-            onRestart={handleRestartCodex}
-            showRestartAction={!embedded}
-          />
 
           {/* 线路与模型：单独一行展示 */}
           <div className="full-row-section">
@@ -1326,6 +1314,19 @@ export function App({
               onRequestRemoveChannel={handleRequestRemoveNotificationChannel}
             />
           </div>
+
+          {/* 运行与维护：辅助区（保留原有运行监控） */}
+          <OperationsPanel
+            codexAppPath={config.codexAppPath}
+            fastContextToolsStatus={fastContextToolsStatus}
+            status={operationsStatus}
+            busy={busy}
+            isBusy={isBusy}
+            pluginMarketplaceStatus={pluginMarketplaceStatus}
+            onRepairPluginMarketplace={handleRepairPluginMarketplace}
+            onRestart={handleRestartCodex}
+            showRestartAction={!embedded}
+          />
 
           {/* 诊断存储保护：整行独占排布 */}
           <div className="full-row-section">

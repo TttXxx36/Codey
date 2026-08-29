@@ -160,6 +160,42 @@ export function CodexAppearanceCard({
                 {fileError}
               </span>
             )}
+
+            <ActionGroup className="codex-appearance-background-actions">
+              <input
+                ref={fileInputRef}
+                className="sr-only"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isBusy || !appearanceEnabled}
+              />
+              <Button
+                disabled={isBusy || !appearanceEnabled}
+                onClick={() => fileInputRef.current?.click()}
+                size="sm"
+                variant="outline"
+              >
+                <IconPhoto aria-hidden="true" size={15} />
+                选择图片
+              </Button>
+              {appearance.backgroundDataUrl && (
+                <Button
+                  aria-label="移除 Codex 背景图片"
+                  disabled={isBusy || !appearanceEnabled}
+                  onClick={() =>
+                    updateAppearance({
+                      backgroundDataUrl: "",
+                      backgroundFileName: "",
+                    })
+                  }
+                  size="icon-sm"
+                  variant="ghost"
+                >
+                  <IconTrash aria-hidden="true" size={15} />
+                </Button>
+              )}
+            </ActionGroup>
           </div>
           <div className="codex-appearance-preview-panel">
             <span className="codex-appearance-preview-label">当前背景预览</span>
@@ -183,41 +219,6 @@ export function CodexAppearanceCard({
           </div>
         </div>
 
-        <ActionGroup className="codex-appearance-background-actions">
-          <input
-            ref={fileInputRef}
-            className="sr-only"
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            disabled={isBusy || !appearanceEnabled}
-          />
-          <Button
-            disabled={isBusy || !appearanceEnabled}
-            onClick={() => fileInputRef.current?.click()}
-            size="sm"
-            variant="outline"
-          >
-            <IconPhoto aria-hidden="true" size={15} />
-            选择图片
-          </Button>
-          {appearance.backgroundDataUrl && (
-            <Button
-              aria-label="移除 Codex 背景图片"
-              disabled={isBusy || !appearanceEnabled}
-              onClick={() =>
-                updateAppearance({
-                  backgroundDataUrl: "",
-                  backgroundFileName: "",
-                })
-              }
-              size="icon-sm"
-              variant="ghost"
-            >
-              <IconTrash aria-hidden="true" size={15} />
-            </Button>
-          )}
-        </ActionGroup>
 
         <div className="codex-appearance-controls">
           <FieldRow
